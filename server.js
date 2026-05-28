@@ -43,7 +43,7 @@ const server = http.createServer((req, res) => {
   }
 
   // Static file serving
-  let filePath = path.join(__dirname, req.url === '/' ? 'pregnancy-tracker.html' : req.url);
+  let filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
   const ext = path.extname(filePath);
   const mimeTypes = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
   fs.readFile(filePath, (err, data) => {

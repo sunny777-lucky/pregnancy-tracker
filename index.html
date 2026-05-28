@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>孕期记录管理</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #D4787A;
+  --primary-light: #F5E1E2;
+  --primary-dark: #B85C5E;
+  --bg: #FDF8F5;
+  --card: #FFFFFF;
+  --text: #3D2C2C;
+  --text-light: #8A7A7A;
+  --border: #EDE0DC;
+  --accent: #C9A96E;
+  --green: #7BA87F;
+  --green-light: #E8F0E9;
+  --blue: #6B9AC4;
+  --blue-light: #E8EFF7;
+  --warning: #E8A850;
+  --warning-light: #FDF3E4;
+  --radius: 14px;
+  --shadow: 0 2px 12px rgba(61,44,44,0.06);
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+html { font-size: 15px; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+.app { max-width: 720px; margin: 0 auto; }
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--primary-light), #FDE8E9);
+  padding: 20px 20px 16px;
+  text-align: center;
+  position: sticky; top: 0; z-index: 100;
+}
+.header h1 { font-size: 1.15rem; font-weight: 600; color: var(--primary-dark); }
+.header .week-badge {
+  display: inline-block; background: var(--primary); color: #fff;
+  padding: 4px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; margin-top: 4px;
+}
+.header .sub { font-size: 0.78rem; color: var(--text-light); margin-top: 2px; }
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: #fff; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-around; padding: 6px 0 env(safe-area-inset-bottom, 6px);
+  max-width: 720px; margin: 0 auto;
+}
+.bottom-nav button {
+  background: none; border: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 12px; font-size: 0.7rem; color: var(--text-light);
+  transition: all 0.2s; min-width: 56px;
+}
+.bottom-nav button .icon { font-size: 1.35rem; }
+.bottom-nav button.active { color: var(--primary); font-weight: 600; }
+
+/* Tab Content */
+.tab-content { display: none; padding: 16px; }
+.tab-content.active { display: block; }
+
+/* Cards */
+.card {
+  background: var(--card); border-radius: var(--radius); padding: 18px;
+  margin-bottom: 14px; box-shadow: var(--shadow);
+}
+.card h3 { font-size: 0.95rem; color: var(--primary-dark); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.card h3 .dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; display: inline-block; }
+
+/* Overview - Pregnancy Info Cards */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.info-item {
+  background: var(--card); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow);
+  text-align: center;
+}
+.info-item .label { font-size: 0.72rem; color: var(--text-light); }
+.info-item .value { font-size: 1.25rem; font-weight: 700; color: var(--primary-dark); margin: 4px 0; }
+.info-item .hint { font-size: 0.68rem; color: var(--text-light); }
+
+.week-detail { background: #fff; border-radius: var(--radius); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
+.week-detail .section { margin-bottom: 12px; }
+.week-detail .section:last-child { margin-bottom: 0; }
+.week-detail .section-title { font-size: 0.85rem; font-weight: 600; color: var(--primary-dark); margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+.week-detail .section-text { font-size: 0.82rem; color: var(--text); }
+
+.section-baby { border-left: 3px solid var(--primary); padding-left: 12px; }
+.section-mom { border-left: 3px solid var(--accent); padding-left: 12px; }
+.section-care { border-left: 3px solid var(--warning); padding-left: 12px; }
+.section-edu { border-left: 3px solid var(--green); padding-left: 12px; }
+
+/* 下周预告 */
+.next-week-preview {
+  margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border);
+  font-size: 0.78rem; color: var(--text-light); line-height: 1.6;
+}
+.next-week-preview .nw-tag {
+  display: inline-block; background: var(--blue-light); color: var(--blue);
+  padding: 1px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 500; margin-right: 6px;
+}
+/* Data Bar */
+.data-bar { display: flex; gap: 10px; margin-bottom: 16px; }
+.data-bar .stat {
+  flex: 1; background: var(--card); border-radius: var(--radius); padding: 12px;
+  text-align: center; box-shadow: var(--shadow);
+}
+.data-bar .stat .num { font-size: 1.2rem; font-weight: 700; color: var(--primary-dark); }
+.data-bar .stat .desc { font-size: 0.68rem; color: var(--text-light); }
+
+/* Forms */
+.form-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.form-row input, .form-row select, .form-row textarea {
+  font-family: var(--font); font-size: 0.88rem;
+  border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px;
+  background: #FAFAFA; color: var(--text); outline: none;
+  transition: border-color 0.2s;
+}
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--primary); }
+.form-row input, .form-row select { flex: 1; min-width: 100px; }
+.form-row textarea { width: 100%; min-height: 60px; resize: vertical; }
+
+.btn {
+  font-family: var(--font); font-size: 0.88rem; font-weight: 500;
+  padding: 10px 20px; border-radius: 10px; border: none; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-outline { background: #fff; color: var(--primary); border: 1.5px solid var(--primary); }
+.btn-outline:hover { background: var(--primary-light); }
+.btn-sm { padding: 6px 14px; font-size: 0.75rem; border-radius: 8px; }
+.btn-danger { background: #fff; color: #D35; border: 1.5px solid #D35; }
+.btn-block { width: 100%; margin-top: 8px; }
+
+/* Record list */
+.record-list { max-height: 400px; overflow-y: auto; }
+.record-item {
+  padding: 12px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 10px;
+}
+.record-item:last-child { border-bottom: none; }
+.record-item .record-main { flex: 1; }
+.record-item .record-title { font-size: 0.85rem; font-weight: 500; }
+.record-item .record-detail { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; }
+.record-item .record-time { font-size: 0.72rem; color: var(--text-light); white-space: nowrap; }
+.record-item .delete-btn { background: none; border: none; color: #D35; cursor: pointer; font-size: 0.9rem; padding: 4px; }
+
+/* Meal type badges */
+.badge {
+  display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 500;
+}
+.badge-breakfast { background: #FDF3E4; color: var(--warning); }
+.badge-lunch { background: #FDE8E9; color: var(--primary); }
+.badge-dinner { background: #E8EFF7; color: var(--blue); }
+.badge-snack-morning { background: #EDF5EC; color: #5A8A5E; }
+.badge-snack-afternoon { background: #FDF0EC; color: #C4856B; }
+.badge-snack-evening { background: #EDE8F5; color: #6B5A8A; }
+
+/* Date picker */
+.date-nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 14px; }
+.date-nav .date-display { font-size: 0.95rem; font-weight: 600; min-width: 100px; text-align: center; }
+.date-nav button { background: var(--card); border: 1.5px solid var(--border); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
+
+/* Meal summary card */
+.meal-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.meal-card {
+  background: #FAFAFA; border-radius: 10px; padding: 10px; min-height: 60px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.meal-card .meal-label { font-size: 0.7rem; color: var(--text-light); font-weight: 500; margin-bottom: 2px; }
+.meal-card .meal-content { font-size: 0.82rem; color: var(--text); }
+.meal-card.empty .meal-content { color: #CCC; font-style: italic; }
+
+/* Checkup card */
+.checkup-card { padding: 14px; border-radius: var(--radius); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.checkup-upcoming { background: var(--blue-light); border-left: 4px solid var(--blue); }
+.checkup-past { background: #F5F5F5; border-left: 4px solid #CCC; }
+.checkup-info { flex: 1; }
+.checkup-info .checkup-date { font-size: 0.78rem; color: var(--text-light); }
+.checkup-info .checkup-type { font-size: 0.9rem; font-weight: 600; }
+.checkup-info .checkup-hospital { font-size: 0.75rem; color: var(--text-light); }
+.countdown { font-size: 0.78rem; color: var(--blue); font-weight: 500; background: #fff; padding: 3px 12px; border-radius: 12px; white-space: nowrap; margin-left: 8px; }
+.countdown-urgent { color: var(--primary); background: var(--primary-light); }
+
+/* Weight chart container */
+.chart-container { position: relative; height: 280px; margin: 10px 0; }
+.chart-container canvas { width: 100% !important; }
+
+/* Settings */
+.settings-row { display: flex; gap: 8px; margin-top: 16px; }
+.settings-row .btn { flex: 1; }
+
+/* Toast */
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 999;
+  background: #3D2C2C; color: #fff; padding: 10px 24px; border-radius: 20px;
+  font-size: 0.85rem; opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 30px 20px; color: var(--text-light); font-size: 0.85rem; }
+.empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 300;
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff; border-radius: 18px 18px 0 0; width: 100%; max-width: 720px;
+  max-height: 80vh; overflow-y: auto; padding: 20px;
+}
+.modal h3 { font-size: 1rem; margin-bottom: 14px; }
+
+@media (min-width: 600px) {
+  .tab-content { padding: 20px; }
+  .header { padding: 24px 24px 18px; }
+  .info-grid { grid-template-columns: repeat(4, 1fr); }
+  .modal-overlay { align-items: center; }
+  .modal { border-radius: var(--radius); margin: 0 16px; max-width: 500px; }
+}
+
+/* Weekly overview */
+.week-compare { display: flex; align-items: stretch; gap: 8px; }
+.week-col { flex: 1; border-radius: 12px; padding: 12px; }
+.week-current { background: #FDF5F5; }
+.week-next { background: #F5F8FD; }
+.week-col-header { font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+.week-col-date { font-size: 0.72rem; color: var(--text-light); margin-bottom: 8px; }
+.week-item { font-size: 0.75rem; color: var(--text); margin-bottom: 4px; line-height: 1.5; }
+.week-item::before { content: '• '; color: var(--primary); font-weight: bold; }
+.week-arrow { display: flex; align-items: center; font-size: 1.2rem; color: var(--text-light); flex-shrink: 0; }
+
+/* Mood */
+.mood-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.mood-btn {
+  width: 44px; height: 44px; font-size: 1.4rem; border-radius: 50%;
+  border: 2px solid var(--border); background: #fff; cursor: pointer;
+  transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+}
+.mood-btn:hover { border-color: var(--primary); background: var(--primary-light); transform: scale(1.1); }
+.mood-btn.selected { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 0 0 3px rgba(212,120,122,0.2); }
+.mood-history { margin-top: 12px; }
+.mood-record { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+.mood-record:last-child { border-bottom: none; }
+.mood-record .mood-emoji { font-size: 1.3rem; }
+.mood-record .mood-text { flex:1; color: var(--text); }
+.mood-record .mood-date { font-size: 0.7rem; color: var(--text-light); white-space: nowrap; }
+
+/* Brand Header */
+.brand-header {
+  text-align: center; padding: 14px 20px 6px;
+  font-size: 0.95rem; font-weight: 600; color: var(--primary-dark);
+  letter-spacing: 1px;
+}
+
+/* Calendar */
+.calendar-card { background: var(--card); border-radius: var(--radius); padding: 12px 12px; margin: 0 16px 14px; box-shadow: var(--shadow); }
+.cal-header { display: flex; align-items: center; justify-content: center; margin-bottom: 10px; gap: 14px; }
+.cal-nav { background: none; border: 1.5px solid var(--border); border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; color: var(--text); transition: all 0.2s; }
+.cal-nav:hover { background: var(--primary-light); border-color: var(--primary); color: var(--primary-dark); }
+.cal-month-title { font-size: 0.95rem; font-weight: 700; color: var(--primary-dark); min-width: 90px; text-align: center; }
+.cal-day-headers { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 2px; }
+.cal-day-headers span { font-size: 0.65rem; color: var(--text-light); padding: 4px 0; font-weight: 500; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; }
+.cal-cell {
+  min-height: 38px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 0.85rem; border-radius: 10px; cursor: default; position: relative; color: var(--text);
+  padding: 3px 1px; gap: 1px; transition: background 0.2s;
+}
+.cal-cell .cell-date { font-size: 0.82rem; font-weight: 500; line-height: 1.2; }
+.cal-cell .cell-label { font-size: 0.55rem; line-height: 1.2; }
+.cal-cell.today {
+  background: var(--primary); color: #fff; border-radius: 14px;
+  padding: 6px 2px 8px; min-height: 50px;
+  box-shadow: 0 2px 8px rgba(212,120,122,0.25);
+}
+.cal-cell.today .cell-date { font-size: 1.05rem; font-weight: 700; color: #fff; }
+.cal-cell.today .cell-label { color: rgba(255,255,255,0.9); font-size: 0.6rem; opacity: 0.9; }
+.cal-cell.selected {
+  background: var(--primary-light);
+  border: 2px solid var(--primary);
+  border-radius: 14px;
+  min-height: 42px;
+}
+.cal-cell.selected .cell-date { font-weight: 600; color: var(--primary-dark); }
+.cal-cell.selected .cell-label { color: var(--primary-dark); font-size: 0.55rem; opacity: 0.8; }
+.cal-cell.other-month { color: #D5CDCD; }
+.cal-cell.other-month .cell-date { opacity: 0.5; }
+.cal-cell.has-record::after { content: ''; position: absolute; bottom: 4px; width: 4px; height: 4px; background: var(--accent); border-radius: 50%; left: 50%; transform: translateX(-50%); }
+.cal-cell.today.has-record::after { background: #fff; }
+.cal-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 0.65rem; color: var(--text-light); align-items: center; }
+.cal-legend .dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.cal-legend .dot-accent { background: var(--accent); }
+.cal-info-row { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); display: flex; justify-content: space-around; text-align: center; flex-wrap: wrap; gap: 4px; }
+.cal-info-item { flex: 1; min-width: 80px; }
+.cal-info-item .cal-info-val { font-size: 0.85rem; font-weight: 700; color: var(--primary-dark); }
+.cal-info-item .cal-info-hint { font-size: 0.62rem; color: var(--text-light); }
+
+/* Alert Card */
+.alert-card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.alert-list { list-style: none; padding: 0; }
+.alert-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+.alert-item:last-child { border-bottom: none; }
+.alert-icon { font-size: 1.2rem; flex-shrink: 0; width: 24px; text-align: center; }
+.alert-content { flex: 1; }
+.alert-tag { display: inline-block; font-size: 0.65rem; padding: 1px 7px; border-radius: 8px; font-weight: 500; margin-right: 4px; }
+.alert-tag-urgent { background: #FDE8E9; color: var(--primary-dark); }
+.alert-tag-info { background: var(--blue-light); color: var(--blue); }
+.alert-tag-warn { background: var(--warning-light); color: var(--warning); }
+.alert-tag-good { background: var(--green-light); color: var(--green); }
+.alert-empty { text-align: center; padding: 10px; color: var(--text-light); font-size: 0.82rem; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 孕周概览 -->
+  <div class="tab-content active" id="tab-overview">
+    <!-- 品牌标题 -->
+    <div class="brand-header">孕小满日记——美好正在发生</div>
+    <div id="syncStatus" style="font-size:0.7rem;text-align:center;margin-bottom:6px;opacity:0.8;">☁️ 同步中...</div>
+    <!-- 月历卡片 -->
+    <div class="calendar-card">
+      <div class="cal-header">
+        <button class="cal-nav" onclick="changeCalendarMonth(-1)">◀</button>
+        <div class="cal-month-title" id="calMonthTitle">2026年5月</div>
+        <button class="cal-nav" onclick="changeCalendarMonth(1)">▶</button>
+      </div>
+      <div class="cal-day-headers"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend">
+        <span><span class="dot dot-accent"></span>有记录</span>
+      </div>
+      <div class="cal-info-row">
+        <div class="cal-info-item">
+          <div class="cal-info-val" id="calOvWeek">13周+4天</div>
+          <div class="cal-info-hint">当前孕周 · 孕中期</div>
+        </div>
+        <div class="cal-info-item">
+          <div class="cal-info-val" id="calWeightRange">55.5 - 57.0 kg</div>
+          <div class="cal-info-hint">本周体重建议范围</div>
+        </div>
+        <div class="cal-info-item">
+          <div class="cal-info-val" id="calDueCount">185天</div>
+          <div class="cal-info-hint">预产期 11/29 · 倒计时</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 智能提醒卡片 -->
+    <div class="alert-card" id="smartAlerts">
+      <h3><span class="dot"></span>本周重点提醒</h3>
+      <div class="alert-list" id="alertList"></div>
+    </div>
+
+    <div class="week-detail" id="weekDetail">
+      <div class="section section-baby">
+        <div class="section-title">👶 宝宝发育</div>
+        <div class="section-text" id="detailBaby">加载中...</div>
+      </div>
+      <div class="section section-mom" style="margin-top:12px;">
+        <div class="section-title">🤰 妈妈变化</div>
+        <div class="section-text" id="detailMom">加载中...</div>
+      </div>
+      <div class="section section-care" style="margin-top:12px;">
+        <div class="section-title">⚠️ 注意事项</div>
+        <div class="section-text" id="detailCare">加载中...</div>
+      </div>
+      <div class="section section-edu" style="margin-top:12px;">
+        <div class="section-title">🎵 胎教建议</div>
+        <div class="section-text" id="detailEdu">加载中...</div>
+      </div>
+      <div class="next-week-preview" id="nextWeekPreview"></div>
+    </div>
+
+    <div class="card" id="moodSection">
+      <h3><span class="dot"></span>今日心情</h3>
+      <div class="mood-picker" id="moodPicker">
+        <button class="mood-btn" data-mood="😊" title="开心">😊</button>
+        <button class="mood-btn" data-mood="🤗" title="幸福">🤗</button>
+        <button class="mood-btn" data-mood="😌" title="平静">😌</button>
+        <button class="mood-btn" data-mood="😴" title="疲惫">😴</button>
+        <button class="mood-btn" data-mood="😤" title="烦躁">😤</button>
+        <button class="mood-btn" data-mood="🤢" title="恶心">🤢</button>
+        <button class="mood-btn" data-mood="😰" title="焦虑">😰</button>
+        <button class="mood-btn" data-mood="😢" title="低落">😢</button>
+      </div>
+      <div class="form-row" style="margin-top:8px;">
+        <textarea id="moodNote" placeholder="今天有什么想说的？（选填）" rows="2"></textarea>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="saveMood()" id="moodSaveBtn">记录今日心情</button>
+      <button class="btn btn-sm btn-outline" id="moodCancelEdit" onclick="cancelEditMood()" style="display:none;margin-top:6px;width:100%;">取消编辑</button>
+      <div id="moodHistory" class="mood-history"></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot"></span>今日数据概览</h3>
+      <div class="data-bar" id="todayStats">
+        <div class="stat"><div class="num" id="statMeals">-</div><div class="desc">今日饮食</div></div>
+        <div class="stat"><div class="num" id="statExercise">-</div><div class="desc">运动/分钟</div></div>
+        <div class="stat"><div class="num" id="statWeight">-</div><div class="desc">体重/kg</div></div>
+      </div>
+      <div class="settings-row">
+        <button class="btn btn-outline" onclick="exportData()">📥 导出备份</button>
+        <button class="btn btn-outline" onclick="importData()">📤 导入备份</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 饮食记录 -->
+  <div class="tab-content" id="tab-diet">
+    <div class="date-nav">
+      <button onclick="changeDate(-1)">◀</button>
+      <div class="date-display" id="dietDate">2026-05-28</div>
+      <button onclick="changeDate(1)">▶</button>
+      <button onclick="selectedDate=todayStr();renderAll();" style="font-size:0.75rem;width:auto;padding:6px 12px;border-radius:8px;">今天</button>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>当日饮食概览</h3>
+      <div class="meal-summary" id="mealSummary">
+        <div class="meal-card empty"><div class="meal-label">🌅 早餐</div><div class="meal-content">暂未记录</div></div>
+        <div class="meal-card empty"><div class="meal-label">☀️ 午餐</div><div class="meal-content">暂未记录</div></div>
+        <div class="meal-card empty"><div class="meal-label">🌇 晚餐</div><div class="meal-content">暂未记录</div></div>
+        <div class="meal-card empty"><div class="meal-label">🥐 上午加餐</div><div class="meal-content">暂未记录</div></div>
+        <div class="meal-card empty"><div class="meal-label">🍎 下午加餐</div><div class="meal-content">暂未记录</div></div>
+        <div class="meal-card empty"><div class="meal-label">🥛 晚上加餐</div><div class="meal-content">暂未记录</div></div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="openDietForm()">+ 添加饮食记录</button>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>历史饮食记录</h3>
+      <div class="record-list" id="dietHistory"><div class="empty-state"><div class="empty-icon">🍽️</div>暂无记录，开始记录你的每一餐吧</div></div>
+    </div>
+  </div>
+
+  <!-- 运动记录 -->
+  <div class="tab-content" id="tab-exercise">
+    <div class="date-nav">
+      <button onclick="changeDate(-1)">◀</button>
+      <div class="date-display" id="exerciseDate">2026-05-28</div>
+      <button onclick="changeDate(1)">▶</button>
+      <button onclick="selectedDate=todayStr();renderAll();" style="font-size:0.75rem;width:auto;padding:6px 12px;border-radius:8px;">今天</button>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>今日运动</h3>
+      <div id="todayExercise"><div class="empty-state"><div class="empty-icon">🏃</div>今天还没有运动记录</div></div>
+      <button class="btn btn-primary btn-block" onclick="openExerciseForm()">+ 添加运动记录</button>
+    </div>
+    <div class="card" style="background:var(--warning-light);">
+      <h3 style="color:var(--warning);"><span class="dot" style="background:var(--warning);"></span>本周运动注意事项</h3>
+      <p style="font-size:0.82rem;color:var(--text);" id="exerciseNote">孕中期适合温和有氧运动：散步、孕妇瑜伽、游泳。避免剧烈跳跃、腹部挤压动作。每天30分钟为宜。</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>历史运动记录</h3>
+      <div class="record-list" id="exerciseHistory"><div class="empty-state"><div class="empty-icon">🏃</div>暂无记录</div></div>
+    </div>
+  </div>
+
+  <!-- 体重记录 -->
+  <div class="tab-content" id="tab-weight">
+    <div class="date-nav">
+      <button onclick="changeDate(-1)">◀</button>
+      <div class="date-display" id="weightDate">2026-05-28</div>
+      <button onclick="changeDate(1)">▶</button>
+      <button onclick="selectedDate=todayStr();renderAll();" style="font-size:0.75rem;width:auto;padding:6px 12px;border-radius:8px;">今天</button>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>体重变化趋势</h3>
+      <div class="chart-container">
+        <canvas id="weightChart"></canvas>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:10px;font-size:0.75rem;color:var(--text-light);">
+        <span>📊 蓝色实线：实际体重</span>
+        <span>🟠 橙色虚线：建议上限</span>
+        <span>🟢 绿色虚线：建议下限</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>记录体重</h3>
+      <div class="form-row">
+        <input type="number" id="weightInput" placeholder="体重 (kg)" step="0.1" min="40" max="120">
+        <button class="btn btn-primary" onclick="addWeight()">记录</button>
+      </div>
+      <div class="record-list" id="weightHistory"><div class="empty-state"><div class="empty-icon">⚖️</div>暂无体重记录</div></div>
+    </div>
+  </div>
+
+  <!-- 产检提醒 -->
+  <div class="tab-content" id="tab-checkup">
+    <div class="card">
+      <h3><span class="dot"></span>即将到来的检查</h3>
+      <div id="upcomingCheckups"><div class="empty-state"><div class="empty-icon">📋</div>暂无待检查项目</div></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>已完成的检查</h3>
+      <div id="pastCheckups"><div class="empty-state"><div class="empty-icon">✅</div>暂无记录</div></div>
+    </div>
+    <div class="card">
+      <h3 id="checkupTitle"><span class="dot"></span>添加产检安排</h3>
+      <div class="form-row">
+        <input type="date" id="checkupDate">
+        <input type="text" id="checkupHospital" placeholder="医院名称">
+      </div>
+      <div class="form-row">
+        <input type="text" id="checkupType" placeholder="检查项目（如：16周B超）">
+        <input type="text" id="checkupTime" placeholder="时间（如：下午2点）">
+      </div>
+      <button class="btn btn-primary btn-block" id="checkupBtn" onclick="addCheckup()">+ 添加检查</button>
+      <button class="btn btn-sm btn-outline" id="checkupCancel" onclick="cancelEditCheckup()" style="display:none;margin-top:8px;width:100%;">取消编辑</button>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="active" data-tab="overview"><span class="icon">🏠</span>概览</button>
+    <button data-tab="diet"><span class="icon">🍽️</span>饮食</button>
+    <button data-tab="exercise"><span class="icon">🏃</span>运动</button>
+    <button data-tab="weight"><span class="icon">⚖️</span>体重</button>
+    <button data-tab="checkup"><span class="icon">📋</span>产检</button>
+  </nav>
+</div>
+
+<!-- Diet Form Modal -->
+<div class="modal-overlay" id="dietModal">
+  <div class="modal">
+    <h3>记录饮食</h3>
+    <div class="form-row">
+      <select id="dietMealType">
+        <option value="breakfast">🌅 早餐</option>
+        <option value="lunch">☀️ 午餐</option>
+        <option value="dinner">🌇 晚餐</option>
+        <option value="morning_snack">🥐 上午加餐</option>
+        <option value="afternoon_snack">🍎 下午加餐</option>
+        <option value="evening_snack">🥛 晚上加餐</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <textarea id="dietFoods" placeholder="吃了什么？（如：杂粮饭、清蒸鱼、炒青菜）"></textarea>
+    </div>
+    <div class="form-row">
+      <textarea id="dietFeeling" placeholder="身体感受（如：无不适 / 轻微腹胀 / 胃口好）"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeModal('dietModal')">取消</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="saveDiet()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Exercise Form Modal -->
+<div class="modal-overlay" id="exerciseModal">
+  <div class="modal">
+    <h3>记录运动</h3>
+    <div class="form-row">
+      <select id="exerciseType">
+        <option value="walking">🚶 散步</option>
+        <option value="yoga">🧘 孕妇瑜伽</option>
+        <option value="swimming">🏊 游泳</option>
+        <option value="pregnancyAerobics">💃 孕妇操</option>
+        <option value="other">🏋️ 其他</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <input type="number" id="exerciseDuration" placeholder="时长（分钟）" min="1" max="180">
+      <select id="exerciseIntensity">
+        <option value="light">轻度</option>
+        <option value="moderate">中度</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <textarea id="exerciseNotes" placeholder="感受与备注（选填）"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeModal('exerciseModal')">取消</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="saveExercise()">保存</button>
+    </div>
+    <div class="card" style="background:var(--warning-light);margin-top:12px;">
+      <p style="font-size:0.8rem;color:var(--text);">孕期运动以「不感到疲惫」为原则。如出现腹痛、出血、头晕等不适，立即停止并就医。</p>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ==================== 数据管理 ====================
+const STORAGE_KEY = 'pregnancy_tracker_v1';
+const LMP = '2026-02-22';
+const PRE_PREGNANCY_WEIGHT = 55;
+const HEIGHT = 157;
+
+let appData = {
+  profile: { lmp: LMP, prePregnancyWeight: PRE_PREGNANCY_WEIGHT, height: HEIGHT },
+  dietRecords: [],
+  exerciseRecords: [],
+  weightRecords: [],
+  checkups: [
+    { id: 'c1', date: '2026-06-25', hospital: '省妇保', type: '16周常规B超 + 宫颈管检查', timeOfDay: '下午', status: 'upcoming', notes: '' }
+  ],
+  moodRecords: []
+};
+
+let selectedDate = todayStr();
+let weightChart = null;
+let editingDietId = null;
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth() + 1;
+let calSelectedDate = todayStr(); // calendar selected date, default today
+
+let syncAvailable = false;
+let lastSyncTime = null;
+const CLOUD_URL = 'https://jsonblob.com/api/jsonBlob/019e6dd5-ac3f-7aad-be8f-dd8e17ed9793';
+
+async function loadData() {
+  // Try loading from cloud first
+  try {
+    const resp = await fetch(CLOUD_URL);
+    if (resp.ok) {
+      const cloudData = await resp.json();
+      if (cloudData && (cloudData.dietRecords || cloudData.moodRecords)) {
+        // Cloud data exists, use it
+        appData = { ...appData, ...cloudData };
+        syncAvailable = true;
+        lastSyncTime = new Date();
+        updateSyncStatus();
+      }
+    }
+  } catch(e) {
+    // Cloud unavailable, fall back to localStorage
+    syncAvailable = false;
+    updateSyncStatus();
+  }
+
+  // Fallback: load from localStorage if no cloud data was loaded
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      // Only use localStorage if cloud didn't provide data (avoid overwriting newer cloud data)
+      if (!appData.dietRecords || appData.dietRecords.length === 0) {
+        appData = { ...appData, ...parsed };
+      }
+      if (!appData.dietRecords) appData.dietRecords = [];
+      if (!appData.exerciseRecords) appData.exerciseRecords = [];
+      if (!appData.weightRecords) appData.weightRecords = [];
+      if (!appData.checkups) appData.checkups = [];
+      if (!appData.moodRecords) appData.moodRecords = [];
+      // Ensure default checkup exists
+      const hasDefault = appData.checkups.some(c => c.date === '2026-06-25' && c.type.includes('16周'));
+      if (!hasDefault) {
+        appData.checkups.unshift({ id: 'c1', date: '2026-06-25', hospital: '省妇保', type: '16周常规B超 + 宫颈管检查', timeOfDay: '下午', status: 'upcoming', notes: '' });
+      }
+      // Ensure profile
+      if (!appData.profile) appData.profile = { lmp: LMP, prePregnancyWeight: PRE_PREGNANCY_WEIGHT, height: HEIGHT };
+    } catch(e) { console.error('Data load error:', e); }
+  }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  syncToCloud();
+}
+
+async function syncToCloud() {
+  try {
+    const resp = await fetch(CLOUD_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(appData)
+    });
+    if (resp.ok) {
+      syncAvailable = true;
+      lastSyncTime = new Date();
+      updateSyncStatus();
+    }
+  } catch(e) {
+    syncAvailable = false;
+  }
+  updateSyncStatus();
+}
+
+function updateSyncStatus() {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  if (syncAvailable) {
+    const timeStr = lastSyncTime ? lastSyncTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
+    el.innerHTML = '☁️ ' + (timeStr ? timeStr + ' 已同步' : '已连接');
+    el.style.color = 'var(--green)';
+  } else {
+    el.innerHTML = '🔒 离线模式';
+    el.style.color = 'var(--text-light)';
+  }
+}
+
+// ==================== 日期工具 ====================
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function parseDate(str) { const [y,m,d] = str.split('-').map(Number); return new Date(y, m-1, d); }
+function formatDateCN(str) { const d = parseDate(str); return (d.getMonth()+1) + '月' + d.getDate() + '日'; }
+function daysBetween(d1, d2) { return Math.floor((parseDate(d2) - parseDate(d1)) / (1000*60*60*24)); }
+
+// ==================== 孕周计算 ====================
+function calcGestational() {
+  return calcGestationalForDate(todayStr());
+}
+function calcGestationalForDate(dateStr) {
+  const days = daysBetween(LMP, dateStr);
+  if (days < 0) return { weeks: 0, days: 0, totalDays: 0, valid: false };
+  const weeks = Math.floor(days / 7);
+  const dayRem = days % 7;
+  return { weeks, days: dayRem, totalDays: days, valid: true };
+}
+function getDueDate() {
+  const lmp = parseDate(LMP);
+  const due = new Date(lmp.getTime() + 280 * 24*60*60*1000);
+  return due;
+}
+function getTrimester(weeks) {
+  if (weeks <= 13) return '第一孕期（孕早期）';
+  if (weeks <= 27) return '第二孕期（孕中期）';
+  return '第三孕期（孕晚期）';
+}
+
+// 获取某日期所在周的周一和周日
+function getWeekMonday(dateStr) {
+  const d = parseDate(dateStr);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // Monday as start
+  d.setDate(d.getDate() + diff);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function getWeekSunday(dateStr) {
+  const monday = parseDate(getWeekMonday(dateStr));
+  monday.setDate(monday.getDate() + 6);
+  return monday.getFullYear() + '-' + String(monday.getMonth()+1).padStart(2,'0') + '-' + String(monday.getDate()).padStart(2,'0');
+}
+function formatWeekRange(startStr, endStr) {
+  const s = parseDate(startStr), e = parseDate(endStr);
+  return (s.getMonth()+1) + '/' + s.getDate() + ' - ' + (e.getMonth()+1) + '/' + e.getDate();
+}
+
+// ==================== 本周/下周概况 ====================
+function renderWeeklyOverview() {
+  const g = calcGestational();
+  const thisWeek = g.weeks;
+  const nextWeek = Math.min(thisWeek + 1, 40);
+
+  document.getElementById('thisWeekNum').textContent = thisWeek;
+  document.getElementById('nextWeekNum').textContent = nextWeek;
+
+  // Week date range
+  const today = todayStr();
+  const mon = getWeekMonday(today);
+  const sun = getWeekSunday(today);
+  document.getElementById('thisWeekRange').textContent = formatWeekRange(mon, sun);
+
+  const nextMon = parseDate(sun); nextMon.setDate(nextMon.getDate() + 1);
+  const nextSun = new Date(nextMon); nextSun.setDate(nextSun.getDate() + 6);
+  document.getElementById('nextWeekRange').textContent = formatWeekRange(
+    nextMon.getFullYear()+'-'+String(nextMon.getMonth()+1).padStart(2,'0')+'-'+String(nextMon.getDate()).padStart(2,'0'),
+    nextSun.getFullYear()+'-'+String(nextSun.getMonth()+1).padStart(2,'0')+'-'+String(nextSun.getDate()).padStart(2,'0')
+  );
+
+  const tw = weekData[thisWeek] || weekData[40];
+  const nw = weekData[nextWeek] || weekData[40];
+  document.getElementById('thisWeekBaby').innerHTML = '👶 ' + tw.baby;
+  document.getElementById('thisWeekCare').innerHTML = '⚠️ ' + tw.care;
+  document.getElementById('nextWeekBaby').innerHTML = '👶 ' + nw.baby;
+  document.getElementById('nextWeekCare').innerHTML = '⚠️ ' + nw.care;
+}
+
+// ==================== 心情记录 ====================
+let selectedMood = null;
+
+function renderMood() {
+  // Reset picker
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  selectedMood = null;
+  document.getElementById('moodNote').value = '';
+
+  if (editingMoodId) {
+    // Editing mode: pre-fill form with the record being edited
+    const rec = appData.moodRecords.find(r => r.id === editingMoodId);
+    if (rec) {
+      const btn = document.querySelector('.mood-btn[data-mood="' + rec.mood + '"]');
+      if (btn) btn.classList.add('selected');
+      document.getElementById('moodNote').value = rec.note || '';
+      selectedMood = rec.mood;
+    }
+    document.getElementById('moodSaveBtn').textContent = '✓ 保存修改';
+    document.getElementById('moodSaveBtn').style.background = 'var(--green)';
+    document.getElementById('moodSaveBtn').style.borderColor = 'var(--green)';
+    document.getElementById('moodCancelEdit').style.display = 'inline-block';
+  } else {
+    document.getElementById('moodSaveBtn').textContent = '记录今日心情';
+    document.getElementById('moodSaveBtn').style.background = '';
+    document.getElementById('moodSaveBtn').style.borderColor = '';
+    document.getElementById('moodCancelEdit').style.display = 'none';
+  }
+
+  // Set up mood button clicks
+  document.querySelectorAll('.mood-btn').forEach(btn => {
+    btn.onclick = function() {
+      document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+      this.classList.add('selected');
+      selectedMood = this.dataset.mood;
+    };
+  });
+
+  // Mood history: show all records, newest first, grouped by date
+  const history = [...appData.moodRecords].sort((a, b) => {
+    if (b.date !== a.date) return b.date.localeCompare(a.date);
+    const timeA = a.time || a.createdAt || '';
+    const timeB = b.time || b.createdAt || '';
+    return timeB.localeCompare(timeA);
+  });
+
+  const container = document.getElementById('moodHistory');
+  if (history.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  let html = '<div style="font-size:0.75rem;color:var(--text-light);margin:12px 0 4px;">📅 历史记录</div>';
+  let lastDate = '';
+
+  history.forEach(r => {
+    const dateCN = formatDateCN(r.date);
+    if (dateCN !== lastDate) {
+      html += '<div style="font-size:0.7rem;color:var(--accent);margin:8px 0 2px;font-weight:500;">' + dateCN + '</div>';
+      lastDate = dateCN;
+    }
+    const timeDisplay = r.time ? ' <span style="font-size:0.6rem;color:var(--text-light);">' + r.time + '</span>' : '';
+    html += '<div class="mood-record">';
+    html += '<span class="mood-emoji">' + r.mood + '</span>';
+    html += '<span class="mood-text">' + escapeHtml(r.note || '无文字') + '</span>';
+    html += '<span class="mood-date">' + timeDisplay + '</span>';
+    html += '<button class="btn btn-sm btn-outline" onclick="editMood(\'' + r.id + '\')" style="font-size:0.6rem;padding:1px 6px;margin-left:4px;">✎</button>';
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function editMood(id) {
+  editingMoodId = id;
+  const rec = appData.moodRecords.find(r => r.id === id);
+  if (!rec) { editingMoodId = null; return; }
+  renderMood();
+  window.scrollTo({ top: document.getElementById('moodSection').offsetTop - 60, behavior: 'smooth' });
+}
+
+function cancelEditMood() {
+  editingMoodId = null;
+  renderMood();
+}
+
+function saveMood() {
+  if (!selectedMood) { showToast('请选择一个心情表情'); return; }
+  const note = document.getElementById('moodNote').value.trim();
+  const wasEditing = !!editingMoodId;
+
+  if (wasEditing) {
+    // Editing existing record
+    const idx = appData.moodRecords.findIndex(r => r.id === editingMoodId);
+    if (idx >= 0) {
+      appData.moodRecords[idx].mood = selectedMood;
+      appData.moodRecords[idx].note = note;
+      appData.moodRecords[idx].updatedAt = new Date().toISOString();
+    }
+    editingMoodId = null;
+  } else {
+    // Always add new record — never overwrite
+    const now = new Date();
+    const record = {
+      id: 'm' + Date.now() + Math.random().toString(36).slice(2, 6),
+      date: todayStr(),
+      time: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'),
+      mood: selectedMood,
+      note: note,
+      createdAt: now.toISOString()
+    };
+    appData.moodRecords.push(record);
+  }
+
+  saveData();
+  renderMood();
+  showToast(wasEditing ? '心情已更新 ✓' : '心情已记录 ✓');
+}
+
+// ==================== 孕周数据 ====================
+const weekData = {
+  13: { baby:'宝宝约7cm，重约25g，指纹开始形成，已经会吮吸拇指了', mom:'早孕反应逐渐减轻，精力开始恢复，肚子微微隆起', care:'补充铁和钙质，避免长时间站立，注意腰背保护', edu:'可以开始胎教了！每天听15-20分钟轻音乐（莫扎特、巴赫）' },
+  14: { baby:'宝宝约9cm，重约45g，能做出皱眉、做鬼脸等表情', mom:'腹部明显隆起，可能出现圆韧带牵拉痛', care:'穿着宽松衣服和孕妇内衣，避免提重物，保持良好的坐姿', edu:'爸爸可以开始和宝宝说话，宝宝已经能听到外界声音' },
+  15: { baby:'宝宝约10cm，重约70g，骨骼变硬，腿比手臂长了', mom:'可能感到第一次胎动（像蝴蝶振翅或气泡），因人而异', care:'注意补钙（每天1000mg），适当晒太阳帮助维生素D合成', edu:'播放胎教音乐并轻轻抚摸腹部，建立亲子互动' },
+  16: { baby:'宝宝约12cm，重约100g，能听见声音，开始长头发和眉毛', mom:'子宫上升到肚脐和耻骨之间，走路姿势可能开始改变', care:'16周左右做常规B超和唐筛/无创DNA，注意唐筛结果', edu:'读一些简单的童话故事给宝宝听，声音要温柔平缓' },
+  17: { baby:'宝宝约13cm，重约140g，脂肪开始储存，能打嗝了', mom:'食欲增加，可能出现腿部抽筋，注意补钙和镁', care:'控制甜食摄入，预防妊娠期糖尿病；每天散步30分钟', edu:'播放不同种类的音乐，观察宝宝对不同音乐的反应' },
+  18: { baby:'宝宝约14cm，重约190g，性别器官已发育完成', mom:'肚子明显变大，可能出现妊娠纹，开始涂抹防妊娠纹产品', care:'侧卧睡眠（推荐左侧卧），可准备孕妇枕辅助', edu:'用手电筒轻轻照射腹部，进行光照胎教（每次5分钟）' },
+  19: { baby:'宝宝约15cm，重约240g，皮肤表面出现胎脂保护', mom:'胎动逐渐规律，可能感到宝宝在"踢腿"', care:'注意记录胎动变化，每天保持心情舒畅避免焦虑', edu:'给宝宝起小名，每天用温柔的语气呼唤他/她' },
+  20: { baby:'宝宝约16cm，重约300g，能吞咽羊水，味蕾开始发育', mom:'子宫到达肚脐位置，半数孕妈已到孕期中点', care:'20-24周做大排畸B超，这是孕期最重要的检查之一', edu:'可以和宝宝玩"踢肚子游戏"，轻轻按压腹部等宝宝回应' },
+  21: { baby:'宝宝约26cm（从头到脚），重约360g，眉毛和眼睑已形成', mom:'体重增长加速，每周约0.4-0.5kg，注意饮食均衡', care:'增加蛋白质摄入（鱼、蛋、瘦肉），监控血压变化', edu:'固定时间进行胎教，让宝宝形成"课程表"习惯' },
+  22: { baby:'宝宝约27cm，重约430g，开始有了规律的睡眠周期', mom:'可能感到Braxton Hicks假性宫缩（腹部发紧），正常现象', care:'避免长时间仰卧（影响血液回流），注意补铁防贫血', edu:'睡前给宝宝唱摇篮曲，有助于建立出生后的睡眠联想' },
+  23: { baby:'宝宝约28cm，重约500g，听力系统基本发育完善', mom:'肚子继续增大，可能出现腰酸背痛，注意休息', care:'可以开始准备待产包和婴儿用品了', edu:'读绘本给宝宝听，不同的语调和节奏是最好的语言胎教' },
+  24: { baby:'宝宝约30cm，重约600g，肺部开始产生表面活性物质', mom:'糖耐量筛查（24-28周），需空腹抽血，提前准备', care:'糖耐检查前一晚8点后禁食，带些食物检查后补充', edu:'用温柔的语气给宝宝描述你正在做的事情和周围的环境' },
+  25: { baby:'宝宝约34cm，重约700g，开始长胖，皮肤不再透明', mom:'可能开始有烧心/胃灼热感，少食多餐可缓解', care:'每餐七八分饱，避免辛辣油腻，饭后不要立即躺下', edu:'播放自然界的声音（海浪、鸟鸣、雨声），丰富胎教内容' },
+  26: { baby:'宝宝约35cm，重约800g，眼睛开始睁开，能感知光线', mom:'肚子明显，可能出现水肿（脚踝、手指），抬高下肢休息', care:'控制盐分摄入（<6g/天），多喝水帮助代谢，定期检查血压', edu:'用手电筒从不同角度照射腹部，培养宝宝的方向感' },
+  27: { baby:'宝宝约36cm，重约900g，大脑快速发育，开始做梦', mom:'即将进入孕晚期，子宫增大可能压迫膀胱导致尿频', care:'28周开始每2周产检一次，关注胎位变化', edu:'每天固定时间数胎动，记录胎动规律，这也是重要的"沟通"' },
+  28: { baby:'宝宝约37cm，重约1100g，睫毛已长出，肺部继续发育', mom:'进入孕晚期，体重增长加速，注意控制每周不超过0.5kg', care:'练习拉玛泽呼吸法为顺产做准备，避免长时间站立', edu:'给宝宝讲出生后的生活场景，比如"妈妈给你准备了小床"' },
+  29: { baby:'宝宝约38cm，重约1250g，大脑皮层沟回开始形成', mom:'可能出现呼吸困难（子宫压迫膈肌），多休息调整', care:'避免仰卧，左侧卧最佳；注意补钙+维生素D', edu:'播放胎教音乐同时，用手在腹部画圈，建立节奏感' },
+  30: { baby:'宝宝约40cm，重约1400g，能分辨妈妈和别人的声音', mom:'行动更加不便，上下楼梯小心，尽量有人陪同', care:'每天数胎动（早中晚各1小时，正常>3次/小时）', edu:'多和宝宝说话，爸爸的声音低频更容易被宝宝听到' },
+  31: { baby:'宝宝约41cm，重约1600g，五种感官全部发育完成', mom:'可能出现坐骨神经痛，热敷和孕妇枕可缓解', care:'可以参加分娩课程，了解顺产过程和减痛方法', edu:'给宝宝描述家庭成员，建立"家庭社交"意识' },
+  32: { baby:'宝宝约42cm，重约1800g，开始转头朝下为分娩做准备', mom:'肚子更大，可能出现失眠，睡前泡脚或听音乐放松', care:'32周后可做小排畸B超，评估胎儿发育和羊水情况', edu:'每天坚持固定胎教时间，形成习惯对宝宝和妈妈都有好处' },
+  33: { baby:'宝宝约43cm，重约2000g，骨骼变硬但头骨仍柔软', mom:'可能出现漏尿（盆底肌松弛），多做凯格尔运动', care:'开始每周产检，监测胎心监护；准备分娩计划', edu:'播放舒缓音乐，妈妈放松的情绪是最好的胎教' },
+  34: { baby:'宝宝约44cm，重约2200g，免疫系统开始成熟', mom:'子宫顶部到达肋骨下缘，呼吸可能更困难', care:'36周前确定分娩医院和方案，整理好待产包', edu:'给宝宝听熟悉的音乐和声音，出生后会更有安全感' },
+  35: { baby:'宝宝约45cm，重约2400g，肺部基本发育成熟', mom:'肚子下沉（入盆前兆），呼吸好转但尿频加重', care:'多走路帮助入盆（每天5000步左右），避免爬楼梯', edu:'宝宝已经能记住熟悉的声音和音乐了，坚持胎教' },
+  36: { baby:'宝宝约46cm，重约2600g，皮肤变得光滑粉嫩', mom:'每周产检（胎心监护+常规检查），随时关注分娩信号', care:'准备待产包放在车上，36周后宝宝随时可能出生', edu:'和宝宝说说出生后的计划，用积极的语言迎接新生活' },
+  37: { baby:'宝宝约47cm，重约2800g，已足月，随时可能出生', mom:'注意分娩前兆：规律宫缩、见红、破水', care:'破水立即去医院（平躺），见红可以先观察情况', edu:'保持平和心态，宝宝能感受到妈妈的情绪波动' },
+  38: { baby:'宝宝约48cm，重约3000g，胎脂开始脱落进入羊水', mom:'行动极度不便，尽量有人陪护，准备好入院物品', care:'任何异常（胎动减少、出血、剧烈腹痛）立即就医', edu:'轻声安抚宝宝，告诉他/她很快就能相见了' },
+  39: { baby:'宝宝约49cm，重约3200g，所有器官发育成熟', mom:'随时可能临产，保持电话畅通，不要远行', care:'规律宫缩（5-10分钟一次）时准备去医院', edu:'放轻松，等待宝宝选择自己的"生日"' },
+  40: { baby:'宝宝约50cm，重约3400g，发育完全，准备出生', mom:'如果超过预产期未发动，医生会安排催产方案', care:'保持信心，听从医生建议，相信自己的身体', edu:'宝宝马上要和你见面了，所有的等待都值得' }
+};
+
+// ==================== 孕期运动指导 ====================
+function getExerciseGuidance(weeks) {
+  if (weeks <= 13) return '孕早期：以散步为主，每天20-30分钟。避免剧烈运动、跳跃、腹部挤压。如有先兆流产迹象，遵医嘱卧床休息。';
+  if (weeks <= 27) return '孕中期：最佳运动期。推荐散步（每天30-40分钟）、孕妇瑜伽、游泳、孕妇操。注意保持水分，穿支撑性好的运动内衣。';
+  return '孕晚期：散步为主（每天20-30分钟），配合凯格尔运动锻炼盆底肌。避免单腿站立、仰卧姿势。身体不适立即停止。';
+}
+
+// BMI: 55/(1.57*1.57) ≈ 22.3 → 正常体重
+// 建议总增重11.5-16kg
+function getWeightRange() {
+  const lmp = parseDate(LMP);
+  const w = appData.profile.prePregnancyWeight;
+  const lower = w + 11.5;
+  const upper = w + 16;
+  return { lower, upper };
+}
+
+// ==================== UI更新 ====================
+function renderAll() {
+  renderCalendar();
+  renderOverview();
+  generateAlerts();
+  renderMood();
+  renderDiet();
+  renderExercise();
+  renderWeight();
+  renderCheckups();
+  updateTodayStats();
+  updateDateDisplays();
+}
+
+function updateTodayStats() {
+  const today = todayStr();
+  const meals = appData.dietRecords.filter(r => r.date === today).length;
+  const exerciseMins = appData.exerciseRecords.filter(r => r.date === today).reduce((sum, r) => sum + r.duration, 0);
+  const weightRec = appData.weightRecords.filter(r => r.date === today)[0];
+  document.getElementById('statMeals').textContent = meals > 0 ? meals + '餐' : '-';
+  document.getElementById('statExercise').textContent = exerciseMins > 0 ? exerciseMins : '-';
+  document.getElementById('statWeight').textContent = weightRec ? weightRec.weight : '-';
+}
+
+function updateDateDisplays() {
+  document.getElementById('dietDate').textContent = selectedDate;
+  document.getElementById('exerciseDate').textContent = selectedDate;
+  document.getElementById('weightDate').textContent = selectedDate;
+}
+
+function changeDate(delta) {
+  const d = parseDate(selectedDate);
+  d.setDate(d.getDate() + delta);
+  selectedDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  if (selectedDate < '2026-02-22') selectedDate = '2026-02-22';
+  if (selectedDate > '2027-01-01') selectedDate = '2027-01-01';
+  renderAll();
+}
+
+// ==================== 本周体重建议范围（基于BMI 22.3动态计算） ====================
+function getWeekWeightRecommendation(weeks) {
+  const preWt = PRE_PREGNANCY_WEIGHT; // 55kg
+  let lowerGain, upperGain;
+
+  // 总增重目标：11.5 - 16 kg
+  // 孕早期(1-13周): 0.5 - 2.0 kg
+  // 孕中期(14-27周): ~0.37-0.50 kg/周
+  // 孕晚期(28-40周): ~0.40-0.50 kg/周
+  if (weeks <= 13) {
+    lowerGain = 0.5 * weeks / 13;
+    upperGain = 2.0 * weeks / 13;
+  } else if (weeks <= 27) {
+    lowerGain = 0.5 + (weeks - 13) * 0.37;
+    upperGain = 2.0 + (weeks - 13) * 0.50;
+  } else {
+    lowerGain = 5.68 + (weeks - 27) * 0.40;
+    upperGain = 9.0 + (weeks - 27) * 0.50;
+  }
+
+  return {
+    lower: Math.round((preWt + lowerGain) * 10) / 10,
+    upper: Math.round((preWt + upperGain) * 10) / 10,
+    lowerGain: Math.round(lowerGain * 10) / 10,
+    upperGain: Math.round(upperGain * 10) / 10
+  };
+}
+
+// ==================== 月历渲染 ====================
+function renderCalendar() {
+  // Update month title
+  document.getElementById('calMonthTitle').textContent = calYear + '年' + calMonth + '月';
+
+  const firstDay = new Date(calYear, calMonth - 1, 1);
+  const lastDay = new Date(calYear, calMonth, 0);
+  const totalDays = lastDay.getDate();
+  // Monday=0 ... Sunday=6 in our grid
+  let startDow = firstDay.getDay(); // 0=Sun
+  startDow = startDow === 0 ? 6 : startDow - 1; // Convert to Mon=0
+
+  const today = todayStr();
+  const grid = document.getElementById('calGrid');
+  let html = '';
+
+  // Prev month fill
+  const prevLastDay = new Date(calYear, calMonth - 1, 0);
+  for (let i = startDow - 1; i >= 0; i--) {
+    const day = prevLastDay.getDate() - i;
+    const dateStr = (calMonth === 1 ? calYear-1 : calYear) + '-' + String(calMonth===1 ? 12 : calMonth-1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    html += '<div class="cal-cell other-month" onclick="selectCalendarDate(\'' + dateStr + '\')"><span class="cell-date">' + day + '</span></div>';
+  }
+
+  // Current month days
+  for (let d = 1; d <= totalDays; d++) {
+    const dateStr = calYear + '-' + String(calMonth).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    const isToday = dateStr === today;
+    const isSelected = dateStr === calSelectedDate;
+    let cls = 'cal-cell';
+    if (isToday) cls += ' today';
+    if (isSelected && !isToday) cls += ' selected';
+
+    // Check if this date has any records
+    const hasDiet = appData.dietRecords.some(r => r.date === dateStr);
+    const hasExercise = appData.exerciseRecords.some(r => r.date === dateStr);
+    const hasWeight = appData.weightRecords.some(r => r.date === dateStr);
+    const hasMood = appData.moodRecords.some(r => r.date === dateStr);
+    if (hasDiet || hasExercise || hasWeight || hasMood) cls += ' has-record';
+
+    const gDate = calcGestationalForDate(dateStr);
+    if (isToday) {
+      html += '<div class="' + cls + '" title="' + dateStr + '" onclick="selectCalendarDate(\'' + dateStr + '\')"><span class="cell-date">' + d + '</span><span class="cell-label">' + gDate.weeks + '周+' + gDate.days + '天</span></div>';
+    } else if (isSelected) {
+      html += '<div class="' + cls + '" title="' + dateStr + '" onclick="selectCalendarDate(\'' + dateStr + '\')"><span class="cell-date">' + d + '</span><span class="cell-label">' + gDate.weeks + '周+' + gDate.days + '天</span></div>';
+    } else {
+      html += '<div class="' + cls + '" title="' + dateStr + '" onclick="selectCalendarDate(\'' + dateStr + '\')"><span class="cell-date">' + d + '</span></div>';
+    }
+  }
+
+  // Next month fill
+  const remaining = 7 - ((startDow + totalDays) % 7);
+  if (remaining < 7) {
+    const nextMonth = calMonth === 12 ? 1 : calMonth + 1;
+    const nextYear = calMonth === 12 ? calYear + 1 : calYear;
+    for (let d = 1; d <= remaining; d++) {
+      const dateStr = nextYear + '-' + String(nextMonth).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      html += '<div class="cal-cell other-month" onclick="selectCalendarDate(\'' + dateStr + '\')"><span class="cell-date">' + d + '</span></div>';
+    }
+  }
+
+  grid.innerHTML = html;
+
+  // Update calendar info row with selected date
+  const g = calcGestationalForDate(calSelectedDate);
+  const wr = getWeekWeightRecommendation(g.weeks);
+  document.getElementById('calOvWeek').textContent = g.weeks + '周+' + g.days + '天';
+  document.getElementById('calWeightRange').textContent = wr.lower + ' - ' + wr.upper + ' kg';
+  const due = getDueDate();
+  const remainingDays = daysBetween(calSelectedDate, due.getFullYear() + '-' + String(due.getMonth() + 1).padStart(2, '0') + '-' + String(due.getDate()).padStart(2, '0'));
+  document.getElementById('calDueCount').textContent = remainingDays + '天';
+}
+
+function changeCalendarMonth(delta) {
+  calMonth += delta;
+  if (calMonth > 12) { calMonth = 1; calYear++; }
+  if (calMonth < 1) { calMonth = 12; calYear--; }
+  renderCalendar();
+}
+
+function selectCalendarDate(dateStr) {
+  calSelectedDate = dateStr;
+  renderCalendar();
+  renderOverview();
+}
+
+// ==================== 智能提醒生成 ====================
+function generateAlerts() {
+  const g = calcGestational();
+  const today = todayStr();
+  const alerts = [];
+
+  // 1. 产检提醒
+  const upcomingCheckups = appData.checkups
+    .filter(c => c.status === 'upcoming')
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const soonCheckup = upcomingCheckups[0];
+  if (soonCheckup) {
+    const daysLeft = daysBetween(today, soonCheckup.date);
+    if (daysLeft <= 7 && daysLeft >= 0) {
+      alerts.push({
+        icon: '📋', tag: 'urgent',
+        text: (daysLeft === 0 ? '今天' : daysLeft + '天后') + '有产检：' + soonCheckup.type + '（' + soonCheckup.hospital + '）',
+        tagText: daysLeft <= 3 ? '临近' : '提醒'
+      });
+    } else if (daysLeft > 7 && daysLeft <= 28) {
+      alerts.push({
+        icon: '📋', tag: 'info',
+        text: daysLeft + '天后有产检：' + soonCheckup.type + '（' + soonCheckup.hospital + '）',
+        tagText: '待办'
+      });
+    }
+  }
+
+  // 2. 补剂提醒（根据孕周）
+  const suppAlerts = getSupplementReminders(g.weeks);
+  alerts.push(...suppAlerts);
+
+  // 3. 体重增长监测
+  const wr = getWeekWeightRecommendation(g.weeks);
+  const weightRecords = [...appData.weightRecords].sort((a, b) => b.date.localeCompare(a.date));
+  if (weightRecords.length > 0) {
+    const latestWt = weightRecords[0].weight;
+    if (latestWt > wr.upper) {
+      const over = (latestWt - wr.upper).toFixed(1);
+      alerts.push({
+        icon: '⚖️', tag: 'warn',
+        text: '体重偏高：当前 ' + latestWt + ' kg，超出本周建议上限 ' + wr.upper + ' kg（+'+ over +' kg），注意控制饮食和增加运动',
+        tagText: '注意'
+      });
+    } else if (latestWt < wr.lower) {
+      const under = (wr.lower - latestWt).toFixed(1);
+      alerts.push({
+        icon: '⚖️', tag: 'warn',
+        text: '体重偏低：当前 ' + latestWt + ' kg，低于本周建议下限 ' + wr.lower + ' kg（-'+ under +' kg），注意营养摄入',
+        tagText: '注意'
+      });
+    } else {
+      alerts.push({
+        icon: '⚖️', tag: 'good',
+        text: '体重正常：当前 ' + latestWt + ' kg，在本周建议范围 ' + wr.lower + ' - ' + wr.upper + ' kg 内',
+        tagText: '正常'
+      });
+    }
+  } else {
+    alerts.push({
+      icon: '⚖️', tag: 'info',
+      text: '本周建议体重范围：' + wr.lower + ' - ' + wr.upper + ' kg，孕前体重 ' + PRE_PREGNANCY_WEIGHT + ' kg，建议增重 ' + wr.lowerGain + ' - ' + wr.upperGain + ' kg，请开始记录体重',
+      tagText: '参考'
+    });
+  }
+
+  // 4. 饮食分析（近7天）
+  const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const recentDiets = appData.dietRecords.filter(r => r.date >= todayStrOffset(-7));
+  if (recentDiets.length > 0) {
+    const totalMeals = recentDiets.length;
+    // Simple heuristic: check if meals mention common food categories
+    const allFoods = recentDiets.map(r => r.foods).join('，');
+    const hasVeg = /菜|蔬|叶|瓜|豆|菇|笋|西兰花|菠菜|番茄|黄瓜|胡萝卜/.test(allFoods);
+    const hasProtein = /肉|鱼|虾|鸡|蛋|豆腐|奶|牛肉|猪|羊/.test(allFoods);
+    const hasCarb = /饭|面|粉|馒头|面包|饼|粥|米|薯|芋|玉米/.test(allFoods);
+
+    if ((hasCarb && !hasVeg && !hasProtein) || (hasCarb && !hasVeg)) {
+      alerts.push({
+        icon: '🥗', tag: 'warn',
+        text: '饮食提醒：近7天饮食碳水偏多，蔬菜不足。建议每餐搭配2种蔬菜和1份优质蛋白（鱼、蛋、瘦肉）',
+        tagText: '改善'
+      });
+    } else if (hasVeg && hasProtein && hasCarb) {
+      alerts.push({
+        icon: '🥗', tag: 'good',
+        text: '饮食均衡：近7天饮食搭配良好，保持规律三餐+适量加餐',
+        tagText: '良好'
+      });
+    }
+
+    // Check meal count
+    const daysWithMeals = new Set(recentDiets.map(r => r.date)).size;
+    if (daysWithMeals < 3 && totalMeals <= 5) {
+      alerts.push({
+        icon: '🍽️', tag: 'info',
+        text: '饮食记录较少：近7天仅' + daysWithMeals + '天有记录，记得每天按时记录三餐哦',
+        tagText: '提醒'
+      });
+    }
+  }
+
+  // 5. 运动回顾
+  const recentExercise = appData.exerciseRecords.filter(r => r.date >= todayStrOffset(-7));
+  if (recentExercise.length === 0) {
+    alerts.push({
+      icon: '🏃', tag: 'info',
+      text: '近7天暂无运动记录。孕中期适合每天散步30分钟或孕妇瑜伽，对身体和心情都有好处',
+      tagText: '提醒'
+    });
+  } else {
+    const totalMins = recentExercise.reduce((s, r) => s + r.duration, 0);
+    const sportDays = new Set(recentExercise.map(r => r.date)).size;
+    if (sportDays >= 4 && totalMins >= 120) {
+      alerts.push({
+        icon: '🏃', tag: 'good',
+        text: '运动良好：近7天运动' + sportDays + '次，共' + totalMins + '分钟，保持这个节奏！',
+        tagText: '优秀'
+      });
+    }
+  }
+
+  // 6. 今日是否是某个重要节点
+  const remainingDays = daysBetween(today, getDueDate().getFullYear() + '-' + String(getDueDate().getMonth()+1).padStart(2,'0') + '-' + String(getDueDate().getDate()).padStart(2,'0'));
+  if (remainingDays === 200 || remainingDays === 150 || remainingDays === 100 || remainingDays === 50) {
+    alerts.push({
+      icon: '🎯', tag: 'info',
+      text: '倒计时' + remainingDays + '天！宝宝很快就要和你见面啦，可以开始准备待产包和婴儿用品了',
+      tagText: '里程碑'
+    });
+  }
+
+  // Render alerts
+  const container = document.getElementById('alertList');
+  if (alerts.length === 0) {
+    container.innerHTML = '<div class="alert-empty">✅ 一切正常，数据充足时会自动生成智能提醒</div>';
+    return;
+  }
+
+  // Sort: urgent first
+  const tagOrder = { urgent: 0, warn: 1, info: 2, good: 3 };
+  alerts.sort((a, b) => (tagOrder[a.tag] || 99) - (tagOrder[b.tag] || 99));
+
+  let html = '';
+  alerts.forEach(a => {
+    html += '<div class="alert-item">';
+    html += '<div class="alert-icon">' + a.icon + '</div>';
+    html += '<div class="alert-content">';
+    html += '<span class="alert-tag alert-tag-' + a.tag + '">' + a.tagText + '</span>';
+    html += a.text;
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
+}
+
+function todayStrOffset(offsetDays) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// ==================== 补剂提醒（按孕周） ====================
+function getSupplementReminders(weeks) {
+  const alerts = [];
+  if (weeks <= 12) {
+    alerts.push({ icon: '💊', tag: 'info', text: '叶酸：每天 400-800 mcg，持续服用至孕12周', tagText: '补剂' });
+  }
+  if (weeks >= 13 && weeks <= 17) {
+    alerts.push({ icon: '💊', tag: 'info', text: '本周起建议开始补充铁剂（预防贫血）+ 钙片（每天1000mg），配合维生素D帮助吸收', tagText: '补剂' });
+  }
+  if (weeks >= 14) {
+    alerts.push({ icon: '🧠', tag: 'info', text: 'DHA：每天 200-300mg，有助于宝宝大脑和视力发育（深海鱼或藻油补充剂）', tagText: '补剂' });
+  }
+  if (weeks >= 18) {
+    alerts.push({ icon: '💊', tag: 'info', text: '继续补钙（每天1000-1200mg）+ 铁剂，如出现腿部抽筋可增加镁摄入', tagText: '补剂' });
+  }
+  if (weeks >= 24 && weeks <= 28) {
+    alerts.push({ icon: '🩸', tag: 'warn', text: '糖耐量筛查窗口期（24-28周）：前一晚8点后禁食，带些食物检查后补充能量', tagText: '准备' });
+  }
+  if (weeks >= 30) {
+    alerts.push({ icon: '💊', tag: 'info', text: '继续补铁补钙，可增加蛋白质摄入（鱼、瘦肉、蛋、豆制品）', tagText: '补剂' });
+  }
+  return alerts;
+}
+
+// ==================== 孕周概览 ====================
+function renderOverview() {
+  const g = calcGestationalForDate(calSelectedDate);
+  const week = g.weeks;
+  const wd = weekData[week] || weekData[40];
+  document.getElementById('detailBaby').textContent = wd.baby;
+  document.getElementById('detailMom').textContent = wd.mom;
+  document.getElementById('detailCare').textContent = wd.care;
+  document.getElementById('detailEdu').textContent = wd.edu;
+
+  // 下周预览（仅显示一行，避免与上面4个section重复）
+  const nextWeek = Math.min(week + 1, 40);
+  const nw = weekData[nextWeek] || weekData[40];
+  const previewEl = document.getElementById('nextWeekPreview');
+  if (previewEl) {
+    previewEl.innerHTML = '<span class="nw-tag">📅 下周(' + nextWeek + '周)预告</span> 👶 ' + nw.baby + ' ｜ ⚠️ ' + nw.care;
+  }
+}
+
+// ==================== 饮食记录 ====================
+function renderDiet() {
+  // Meal summary
+  const meals = appData.dietRecords.filter(r => r.date === selectedDate);
+  const mealTypes = { breakfast: [], lunch: [], dinner: [], morning_snack: [], afternoon_snack: [], evening_snack: [] };
+  meals.forEach(m => { if (mealTypes[m.meal]) mealTypes[m.meal].push(m); });
+
+  const summary = document.getElementById('mealSummary');
+  const typeLabels = { breakfast: '🌅 早餐', lunch: '☀️ 午餐', dinner: '🌇 晚餐', morning_snack: '🥐 上午加餐', afternoon_snack: '🍎 下午加餐', evening_snack: '🥛 晚上加餐' };
+  let html = '';
+  for (const [type, records] of Object.entries(mealTypes)) {
+    if (records.length === 0) {
+      html += '<div class="meal-card empty"><div class="meal-label">'+typeLabels[type]+'</div><div class="meal-content">暂未记录</div></div>';
+    } else {
+      const foods = records.map(r => r.foods).join('；');
+      const feelings = records.filter(r => r.feeling).map(r => r.feeling).join('；');
+      html += '<div class="meal-card"><div class="meal-label">'+typeLabels[type]+'</div><div class="meal-content">'+foods+'</div>';
+      if (feelings) html += '<div style="font-size:0.7rem;color:var(--text-light);margin-top:2px;">💭 '+feelings+'</div>';
+      html += '</div>';
+    }
+  }
+  summary.innerHTML = html;
+
+  // History
+  const historyContainer = document.getElementById('dietHistory');
+  const mealOrder = { breakfast:0, lunch:1, dinner:2, morning_snack:3, afternoon_snack:4, evening_snack:5 };
+  const sortedRecords = [...appData.dietRecords].sort((a,b) => {
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
+    return (mealOrder[a.meal]||0) - (mealOrder[b.meal]||0);
+  });
+
+  if (sortedRecords.length === 0) {
+    historyContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">🍽️</div>暂无记录，开始记录你的每一餐吧</div>';
+    return;
+  }
+
+  const badgeClass = { breakfast:'badge-breakfast', lunch:'badge-lunch', dinner:'badge-dinner', morning_snack:'badge-snack-morning', afternoon_snack:'badge-snack-afternoon', evening_snack:'badge-snack-evening' };
+  const badgeText = { breakfast:'早餐', lunch:'午餐', dinner:'晚餐', morning_snack:'上午加餐', afternoon_snack:'下午加餐', evening_snack:'晚上加餐' };
+
+  let histHtml = '';
+  sortedRecords.forEach(r => {
+    histHtml += '<div class="record-item">';
+    histHtml += '<div class="record-main">';
+    histHtml += '<span class="badge '+ (badgeClass[r.meal]||'') +'">'+ (badgeText[r.meal]||r.meal) +'</span> ';
+    histHtml += '<span class="record-title">'+ escapeHtml(r.foods) +'</span>';
+    if (r.feeling) histHtml += '<div class="record-detail">💭 '+ escapeHtml(r.feeling) +'</div>';
+    histHtml += '</div>';
+    histHtml += '<div class="record-time">'+ formatDateCN(r.date) + (r.time ? ' ' + r.time : '') +'<br><div style="display:flex;gap:4px;justify-content:flex-end;margin-top:2px;">';
+    histHtml += '<button class="btn btn-sm btn-outline" onclick="editDiet(\''+ r.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+    histHtml += '<button class="delete-btn" onclick="deleteDiet(\''+ r.id +'\')">✕</button>';
+    histHtml += '</div></div>';
+    histHtml += '</div>';
+  });
+  historyContainer.innerHTML = histHtml;
+}
+
+function openDietForm(editId) {
+  editingDietId = editId || null;
+  if (editId) {
+    const rec = appData.dietRecords.find(r => r.id === editId);
+    if (rec) {
+      document.getElementById('dietMealType').value = rec.meal;
+      document.getElementById('dietFoods').value = rec.foods;
+      document.getElementById('dietFeeling').value = rec.feeling || '';
+      selectedDate = rec.date;
+      updateDateDisplays();
+    }
+  } else {
+    document.getElementById('dietFoods').value = '';
+    document.getElementById('dietFeeling').value = '';
+    document.getElementById('dietMealType').value = 'breakfast';
+  }
+  openModal('dietModal');
+}
+
+function editDiet(id) {
+  openDietForm(id);
+}
+
+function saveDiet() {
+  const foods = document.getElementById('dietFoods').value.trim();
+  if (!foods) { showToast('请填写饮食内容'); return; }
+  const meal = document.getElementById('dietMealType').value;
+  const now = new Date();
+  const record = {
+    id: editingDietId || ('diet_' + Date.now()),
+    date: selectedDate,
+    meal: meal,
+    foods: foods,
+    feeling: document.getElementById('dietFeeling').value.trim(),
+    time: String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0'),
+    createdAt: (editingDietId ? (appData.dietRecords.find(r => r.id === editingDietId) || {}).createdAt : null) || now.toISOString()
+  };
+  if (editingDietId) {
+    const idx = appData.dietRecords.findIndex(r => r.id === editingDietId);
+    if (idx >= 0) appData.dietRecords[idx] = record;
+  } else {
+    appData.dietRecords.push(record);
+  }
+  saveData();
+  closeModal('dietModal');
+  selectedDate = todayStr();
+  renderAll();
+  showToast('饮食记录已保存 ✓');
+}
+
+function deleteDiet(id) {
+  if (!confirm('确定删除这条饮食记录吗？')) return;
+  appData.dietRecords = appData.dietRecords.filter(r => r.id !== id);
+  saveData();
+  renderAll();
+  showToast('已删除');
+}
+
+// ==================== 运动记录 ====================
+let editingExerciseId = null;
+let editingCheckupId = null;
+let editingMoodId = null;
+
+function renderExercise() {
+  const g = calcGestational();
+  document.getElementById('exerciseNote').textContent = getExerciseGuidance(g.weeks);
+
+  // Today
+  const todayRecords = appData.exerciseRecords.filter(r => r.date === selectedDate);
+  const todayContainer = document.getElementById('todayExercise');
+  if (todayRecords.length === 0) {
+    todayContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">🏃</div>今天还没有运动记录</div>';
+  } else {
+    const typeLabels = { walking:'🚶 散步', yoga:'🧘 孕妇瑜伽', swimming:'🏊 游泳', pregnancyAerobics:'💃 孕妇操', other:'🏋️ 其他' };
+    let html = '';
+    todayRecords.forEach(r => {
+      html += '<div class="record-item">';
+      html += '<div class="record-main">';
+      html += '<span class="record-title">'+ (typeLabels[r.type]||r.type) +' · '+ r.duration +'分钟 · '+ (r.intensity==='moderate'?'中度':'轻度') +'</span>';
+      if (r.notes) html += '<div class="record-detail">'+ escapeHtml(r.notes) +'</div>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:4px;align-items:center;">';
+      html += '<button class="btn btn-sm btn-outline" onclick="editExercise(\''+ r.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+      html += '<button class="delete-btn" onclick="deleteExercise(\''+ r.id +'\')">✕</button>';
+      html += '</div>';
+      html += '</div>';
+    });
+    todayContainer.innerHTML = html;
+  }
+
+  // History
+  const historyContainer = document.getElementById('exerciseHistory');
+  const allRecords = [...appData.exerciseRecords].sort((a,b) => b.date.localeCompare(a.date));
+  if (allRecords.length === 0) {
+    historyContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">🏃</div>暂无记录</div>';
+    return;
+  }
+  const typeLabels = { walking:'🚶 散步', yoga:'🧘 孕妇瑜伽', swimming:'🏊 游泳', pregnancyAerobics:'💃 孕妇操', other:'🏋️ 其他' };
+  let html = '';
+  allRecords.forEach(r => {
+    html += '<div class="record-item">';
+    html += '<div class="record-main">';
+    html += '<span class="record-title">'+ (typeLabels[r.type]||r.type) +' · '+ r.duration +'分钟 · '+ (r.intensity==='moderate'?'中度':'轻度') +'</span>';
+    if (r.notes) html += '<div class="record-detail">'+ escapeHtml(r.notes) +'</div>';
+    html += '</div>';
+    html += '<div class="record-time">'+ formatDateCN(r.date) + (r.time ? ' ' + r.time : '') +'<br><div style="display:flex;gap:4px;justify-content:flex-end;margin-top:2px;">';
+    html += '<button class="btn btn-sm btn-outline" onclick="editExercise(\''+ r.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+    html += '<button class="delete-btn" onclick="deleteExercise(\''+ r.id +'\')">✕</button>';
+    html += '</div></div>';
+    html += '</div>';
+  });
+  historyContainer.innerHTML = html;
+}
+
+function openExerciseForm(editId) {
+  editingExerciseId = editId || null;
+  if (editId) {
+    const rec = appData.exerciseRecords.find(r => r.id === editId);
+    if (rec) {
+      document.getElementById('exerciseType').value = rec.type;
+      document.getElementById('exerciseDuration').value = rec.duration;
+      document.getElementById('exerciseIntensity').value = rec.intensity;
+      document.getElementById('exerciseNotes').value = rec.notes || '';
+      selectedDate = rec.date;
+      updateDateDisplays();
+    }
+  } else {
+    editingExerciseId = null;
+    document.getElementById('exerciseDuration').value = '';
+    document.getElementById('exerciseNotes').value = '';
+    document.getElementById('exerciseType').value = 'walking';
+    document.getElementById('exerciseIntensity').value = 'light';
+  }
+  openModal('exerciseModal');
+}
+
+function editExercise(id) {
+  openExerciseForm(id);
+}
+
+function saveExercise() {
+  const duration = parseInt(document.getElementById('exerciseDuration').value);
+  if (!duration || duration < 1) { showToast('请填写运动时长'); return; }
+  const now = new Date();
+  const record = {
+    id: editingExerciseId || ('ex_' + Date.now()),
+    date: selectedDate,
+    type: document.getElementById('exerciseType').value,
+    duration: duration,
+    intensity: document.getElementById('exerciseIntensity').value,
+    notes: document.getElementById('exerciseNotes').value.trim(),
+    time: String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0'),
+    createdAt: (editingExerciseId ? (appData.exerciseRecords.find(r => r.id === editingExerciseId) || {}).createdAt : null) || now.toISOString()
+  };
+  if (editingExerciseId) {
+    const idx = appData.exerciseRecords.findIndex(r => r.id === editingExerciseId);
+    if (idx >= 0) appData.exerciseRecords[idx] = record;
+  } else {
+    appData.exerciseRecords.push(record);
+  }
+  saveData();
+  closeModal('exerciseModal');
+  selectedDate = todayStr();
+  renderAll();
+  showToast('运动记录已保存 ✓');
+}
+
+function deleteExercise(id) {
+  if (!confirm('确定删除这条运动记录吗？')) return;
+  appData.exerciseRecords = appData.exerciseRecords.filter(r => r.id !== id);
+  saveData();
+  renderAll();
+  showToast('已删除');
+}
+
+// ==================== 体重记录 ====================
+function renderWeight() {
+  const records = [...appData.weightRecords].sort((a,b) => a.date.localeCompare(b.date));
+
+  // History list
+  const historyContainer = document.getElementById('weightHistory');
+  if (records.length === 0) {
+    historyContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">⚖️</div>暂无体重记录</div>';
+  } else {
+    let html = '';
+    [...records].reverse().forEach(r => {
+      const gain = r.weight - PRE_PREGNANCY_WEIGHT;
+      const gainStr = gain >= 0 ? '+' + gain.toFixed(1) : gain.toFixed(1);
+      html += '<div class="record-item">';
+      html += '<div class="record-main"><span class="record-title">'+ r.weight +' kg</span> <span style="font-size:0.75rem;color:var(--text-light);">（'+ gainStr +' kg）</span></div>';
+      html += '<div class="record-time">'+ formatDateCN(r.date) + (r.time ? ' ' + r.time : '') +'<br><div style="display:flex;gap:4px;justify-content:flex-end;margin-top:2px;">';
+      html += '<button class="btn btn-sm btn-outline" onclick="editWeight(\''+ r.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+      html += '<button class="delete-btn" onclick="deleteWeight(\''+ r.id +'\')">✕</button>';
+      html += '</div></div>';
+      html += '</div>';
+    });
+    historyContainer.innerHTML = html;
+  }
+
+  // Chart
+  updateWeightChart(records);
+}
+
+function updateWeightChart(records) {
+  const canvas = document.getElementById('weightChart');
+  const ctx = canvas.getContext('2d');
+  if (weightChart) weightChart.destroy();
+
+  if (records.length === 0) {
+    canvas.style.display = 'none';
+    canvas.parentElement.innerHTML = '<div class="empty-state" style="padding:60px 20px;"><div class="empty-icon">📊</div>记录体重后这里会显示趋势图</div>' + canvas.outerHTML;
+    return;
+  }
+
+  const labels = records.map(r => formatDateCN(r.date));
+  const weights = records.map(r => r.weight);
+
+  // Calculate recommended range
+  const firstDate = parseDate(records[0].date);
+  const lastDate = parseDate(records[records.length-1].date);
+
+  // Calculate weeks pregnant at each record date
+  const weekNums = records.map(r => {
+    const daysPreg = daysBetween(LMP, r.date);
+    return daysPreg / 7;
+  });
+
+  const lowerLine = weekNums.map(w => {
+    if (w <= 13) return PRE_PREGNANCY_WEIGHT + (0.5 * w / 13);
+    if (w <= 27) return PRE_PREGNANCY_WEIGHT + 0.5 + ((w - 13) * 0.37);
+    return PRE_PREGNANCY_WEIGHT + 0.5 + (14 * 0.37) + ((w - 27) * 0.37);
+  });
+
+  const upperLine = weekNums.map(w => {
+    if (w <= 13) return PRE_PREGNANCY_WEIGHT + (2 * w / 13);
+    if (w <= 27) return PRE_PREGNANCY_WEIGHT + 2 + ((w - 13) * 0.52);
+    return PRE_PREGNANCY_WEIGHT + 2 + (14 * 0.52) + ((w - 27) * 0.52);
+  });
+
+  weightChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '实际体重',
+          data: weights,
+          borderColor: '#D4787A',
+          backgroundColor: 'rgba(212,120,122,0.1)',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#D4787A',
+          tension: 0.3,
+          fill: false
+        },
+        {
+          label: '建议上限',
+          data: upperLine,
+          borderColor: '#E8A850',
+          borderDash: [6, 3],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false
+        },
+        {
+          label: '建议下限',
+          data: lowerLine,
+          borderColor: '#7BA87F',
+          borderDash: [6, 3],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16, font: { size: 11 } } }
+      },
+      scales: {
+        y: {
+          min: Math.min(PRE_PREGNANCY_WEIGHT - 2, ...weights) - 1,
+          max: Math.max(...upperLine) + 3,
+          ticks: { callback: v => v + ' kg', font: { size: 10 } }
+        },
+        x: { ticks: { font: { size: 9 }, maxRotation: 45 } }
+      }
+    }
+  });
+}
+
+function addWeight() {
+  const w = parseFloat(document.getElementById('weightInput').value);
+  if (!w || w < 40 || w > 120) { showToast('请输入合理的体重数值'); return; }
+  // Check if already recorded today
+  const existing = appData.weightRecords.find(r => r.date === selectedDate);
+  const now = new Date();
+  const timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  if (existing) {
+    if (!confirm('今天已有体重记录（'+ existing.weight +' kg），要更新为 '+ w +' kg 吗？')) return;
+    existing.weight = w;
+    existing.time = timeStr;
+  } else {
+    appData.weightRecords.push({ id: 'wt_' + Date.now(), date: selectedDate, weight: w, time: timeStr, createdAt: now.toISOString() });
+  }
+  saveData();
+  document.getElementById('weightInput').value = '';
+  renderAll();
+  showToast('体重已记录 ✓');
+}
+
+function editWeight(id) {
+  const r = appData.weightRecords.find(r => r.id === id);
+  if (!r) return;
+  const newWeight = prompt('修改体重记录（'+ formatDateCN(r.date) +'）\n当前：' + r.weight + ' kg\n请输入新体重（kg）：', r.weight);
+  if (newWeight === null) return;
+  const w = parseFloat(newWeight);
+  if (isNaN(w) || w < 20 || w > 200) { showToast('请输入合理的体重值（20-200 kg）'); return; }
+  r.weight = w;
+  r.time = String(new Date().getHours()).padStart(2,'0') + ':' + String(new Date().getMinutes()).padStart(2,'0');
+  saveData();
+  renderWeight();
+  showToast('体重已更新 ✓');
+}
+
+function deleteWeight(id) {
+  if (!confirm('确定删除这条体重记录吗？')) return;
+  appData.weightRecords = appData.weightRecords.filter(r => r.id !== id);
+  saveData();
+  renderAll();
+  showToast('已删除');
+}
+
+// ==================== 产检提醒 ====================
+function renderCheckups() {
+  const upcoming = appData.checkups.filter(c => c.status === 'upcoming').sort((a,b) => a.date.localeCompare(b.date));
+  const past = appData.checkups.filter(c => c.status === 'completed').sort((a,b) => b.date.localeCompare(a.date));
+
+  const upcomingHtml = upcoming.length === 0
+    ? '<div class="empty-state"><div class="empty-icon">📋</div>暂无待检查项目</div>'
+    : upcoming.map(c => {
+        const daysLeft = daysBetween(todayStr(), c.date);
+        let countdownText;
+        let countdownClass = '';
+        if (daysLeft < 0) {
+          countdownText = '已过期';
+          countdownClass = ' countdown-urgent';
+        } else if (daysLeft === 0) {
+          countdownText = '就是今天！';
+          countdownClass = ' countdown-urgent';
+        } else if (daysLeft <= 7) {
+          countdownText = '还有' + daysLeft + '天';
+          countdownClass = ' countdown-urgent';
+        } else {
+          countdownText = '还有' + daysLeft + '天';
+        }
+        let html = '<div class="checkup-card checkup-upcoming">';
+        html += '<div class="checkup-info">';
+        html += '<div class="checkup-date">'+ formatDateCN(c.date) + (c.timeOfDay ? ' · ' + c.timeOfDay : '') +'</div>';
+        html += '<div class="checkup-type">'+ escapeHtml(c.type) +'</div>';
+        html += '<div class="checkup-hospital">📍 '+ escapeHtml(c.hospital) +'</div>';
+        html += '</div>';
+        html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">';
+        html += '<span class="countdown'+ countdownClass +'">'+ countdownText +'</span>';
+        html += '<div style="display:flex;gap:4px;">';
+        html += '<button class="btn btn-sm btn-outline" onclick="markCheckupDone(\''+ c.id +'\')">✓</button>';
+        html += '<button class="btn btn-sm btn-outline" onclick="editCheckup(\''+ c.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+        html += '<button class="btn btn-sm btn-danger" onclick="deleteCheckup(\''+ c.id +'\')">✕</button>';
+        html += '</div></div></div>';
+        return html;
+      }).join('');
+
+  const pastHtml = past.length === 0
+    ? '<div class="empty-state"><div class="empty-icon">✅</div>暂无记录</div>'
+    : past.map(c => {
+        let html = '<div class="checkup-card checkup-past">';
+        html += '<div class="checkup-info">';
+        html += '<div class="checkup-date">'+ formatDateCN(c.date) +'</div>';
+        html += '<div class="checkup-type">'+ escapeHtml(c.type) +'</div>';
+        html += '<div class="checkup-hospital">📍 '+ escapeHtml(c.hospital) +'</div>';
+        html += '</div>';
+        html += '<div style="display:flex;gap:4px;">';
+        html += '<button class="btn btn-sm btn-outline" onclick="editCheckup(\''+ c.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+        html += '<button class="btn btn-sm btn-danger" onclick="deleteCheckup(\''+ c.id +'\')">✕</button>';
+        html += '</div>';
+        return html;
+      }).join('');
+
+  document.getElementById('upcomingCheckups').innerHTML = upcomingHtml;
+  document.getElementById('pastCheckups').innerHTML = pastHtml;
+}
+
+function editCheckup(id) {
+  const c = appData.checkups.find(c => c.id === id);
+  if (!c) return;
+  editingCheckupId = id;
+  document.getElementById('checkupDate').value = c.date;
+  document.getElementById('checkupHospital').value = c.hospital;
+  document.getElementById('checkupType').value = c.type;
+  document.getElementById('checkupTime').value = c.timeOfDay || '';
+  document.getElementById('checkupBtn').textContent = '✓ 保存修改';
+  document.getElementById('checkupBtn').style.background = 'var(--green)';
+  document.getElementById('checkupBtn').style.borderColor = 'var(--green)';
+  document.getElementById('checkupTitle').textContent = '编辑产检安排';
+  document.getElementById('checkupCancel').style.display = 'inline-block';
+  window.scrollTo({ top: document.getElementById('checkupTitle').offsetTop - 80, behavior: 'smooth' });
+}
+
+function cancelEditCheckup() {
+  editingCheckupId = null;
+  document.getElementById('checkupDate').value = '';
+  document.getElementById('checkupHospital').value = '';
+  document.getElementById('checkupType').value = '';
+  document.getElementById('checkupTime').value = '';
+  document.getElementById('checkupBtn').textContent = '+ 添加检查';
+  document.getElementById('checkupBtn').style.background = '';
+  document.getElementById('checkupBtn').style.borderColor = '';
+  document.getElementById('checkupTitle').textContent = '添加产检安排';
+  document.getElementById('checkupCancel').style.display = 'none';
+}
+
+function addCheckup() {
+  const date = document.getElementById('checkupDate').value;
+  const hospital = document.getElementById('checkupHospital').value.trim();
+  const type = document.getElementById('checkupType').value.trim();
+  const timeOfDay = document.getElementById('checkupTime').value.trim();
+  if (!date || !hospital || !type) { showToast('请填写完整的检查信息'); return; }
+
+  if (editingCheckupId) {
+    const c = appData.checkups.find(c => c.id === editingCheckupId);
+    if (c) {
+      c.date = date; c.hospital = hospital; c.type = type; c.timeOfDay = timeOfDay;
+    }
+  } else {
+    appData.checkups.push({
+      id: 'cu_' + Date.now(),
+      date, hospital, type, timeOfDay, status: 'upcoming', notes: '', createdAt: new Date().toISOString()
+    });
+  }
+  saveData();
+  cancelEditCheckup();
+  renderAll();
+  showToast(editingCheckupId ? '检查已更新 ✓' : '检查已添加 ✓');
+  editingCheckupId = null;
+}
+
+function markCheckupDone(id) {
+  const c = appData.checkups.find(c => c.id === id);
+  if (c) { c.status = 'completed'; saveData(); renderAll(); showToast('已标记为完成 ✓'); }
+}
+
+function deleteCheckup(id) {
+  if (!confirm('确定删除这条检查记录吗？')) return;
+  appData.checkups = appData.checkups.filter(c => c.id !== id);
+  saveData();
+  renderAll();
+  showToast('已删除');
+}
+
+// ==================== 导出/导入 ====================
+function exportData() {
+  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '孕期记录备份_' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('数据已导出 ✓');
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.profile && !data.dietRecords && !data.weightRecords) {
+          showToast('文件格式不正确'); return;
+        }
+        if (!confirm('将用导入数据替换当前数据，确定继续？')) return;
+        appData = { ...appData, ...data };
+        saveData();
+        renderAll();
+        showToast('数据已导入 ✓');
+      } catch(e) {
+        showToast('文件解析失败，请选择正确的备份文件');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ==================== 辅助函数 ====================
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ==================== Tab切换 ====================
+document.querySelectorAll('.bottom-nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tabName = btn.dataset.tab;
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    document.getElementById('tab-' + tabName).classList.add('active');
+    if (tabName === 'weight') renderWeight();
+    if (tabName === 'overview') { calYear = new Date().getFullYear(); calMonth = new Date().getMonth() + 1; calSelectedDate = todayStr(); renderCalendar(); renderOverview(); generateAlerts(); renderMood(); }
+  });
+});
+
+// ==================== 初始化 ====================
+(async function() {
+  await loadData();
+  selectedDate = todayStr();
+  renderAll();
+})();
+</script>
+</body>
+</html>
