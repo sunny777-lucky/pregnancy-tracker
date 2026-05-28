@@ -626,14 +626,15 @@ let calSelectedDate = todayStr(); // calendar selected date, default today
 
 let syncAvailable = false;
 let lastSyncTime = null;
+const CLOUD_URL = 'https://jsonblob.com/api/jsonBlob/019e6dd5-ac3f-7aad-be8f-dd8e17ed9793';
 
 async function loadData() {
   // Try loading from cloud first
   try {
-    const resp = await fetch('/api/sync');
+    const resp = await fetch(CLOUD_URL);
     if (resp.ok) {
       const cloudData = await resp.json();
-      if (cloudData && cloudData.dietRecords) {
+      if (cloudData && (cloudData.dietRecords || cloudData.moodRecords)) {
         // Cloud data exists, use it
         appData = { ...appData, ...cloudData };
         syncAvailable = true;
@@ -679,8 +680,8 @@ function saveData() {
 
 async function syncToCloud() {
   try {
-    const resp = await fetch('/api/sync', {
-      method: 'POST',
+    const resp = await fetch(CLOUD_URL, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(appData)
     });
