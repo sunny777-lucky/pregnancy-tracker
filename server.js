@@ -16,7 +16,6 @@ const server = http.createServer((req, res) => {
   // API: Sync data
   if (req.url === '/api/sync') {
     if (req.method === 'GET') {
-      // Return saved data
       fs.readFile(DATA_FILE, (err, data) => {
         if (err) { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{}'); return; }
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -25,7 +24,6 @@ const server = http.createServer((req, res) => {
       return;
     }
     if (req.method === 'POST') {
-      // Save data
       let body = '';
       req.on('data', chunk => body += chunk);
       req.on('end', () => {
@@ -43,7 +41,8 @@ const server = http.createServer((req, res) => {
   }
 
   // Static file serving
-  let filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
+  let urlPath = req.url.split('?')[0]; // strip query params
+  let filePath = path.join(__dirname, urlPath === '/' ? 'index.html' : urlPath);
   const ext = path.extname(filePath);
   const mimeTypes = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
   fs.readFile(filePath, (err, data) => {

@@ -335,7 +335,8 @@ body {
   <div class="tab-content active" id="tab-overview">
     <!-- 品牌标题 -->
     <div class="brand-header">孕小满日记——美好正在发生</div>
-    <div id="syncStatus" style="font-size:0.7rem;text-align:center;margin-bottom:6px;opacity:0.8;">☁️ 同步中...</div>
+    <div id="syncStatus" style="font-size:0.7rem;text-align:center;margin-bottom:6px;opacity:0.8;">☁️ 初始化中...</div>
+    <div id="syncDebug" style="font-size:0.65rem;text-align:center;margin-bottom:8px;color:#999;font-family:monospace;">检测中...</div>
     <!-- 月历卡片 -->
     <div class="calendar-card">
       <div class="cal-header">
@@ -626,35 +627,41 @@ let calSelectedDate = todayStr(); // calendar selected date, default today
 
 let syncAvailable = false;
 let lastSyncTime = null;
-const CLOUD_URL = '/api/sync';
+
+const BLOB_URL = 'https://jsonblob.com/api/jsonBlob/019e714e-9fee-7c47-8108-df9a2ef620c9';
 
 async function loadData() {
   // Try loading from cloud first
   try {
-    const resp = await fetch(CLOUD_URL);
+    const resp = await fetch(BLOB_URL + '?t=' + Date.now(), { cache: 'no-store' });
     if (resp.ok) {
       const cloudData = await resp.json();
-      if (cloudData && (cloudData.dietRecords || cloudData.moodRecords)) {
-        // Cloud data exists, use it
+      if (cloudData && typeof cloudData === 'object') {
         appData = { ...appData, ...cloudData };
+        if (!appData.dietRecords) appData.dietRecords = [];
+        if (!appData.exerciseRecords) appData.exerciseRecords = [];
+        if (!appData.weightRecords) appData.weightRecords = [];
+        if (!appData.checkups) appData.checkups = [];
+        if (!appData.moodRecords) appData.moodRecords = [];
+        if (!appData.profile) appData.profile = { lmp: LMP, prePregnancyWeight: PRE_PREGNANCY_WEIGHT, height: HEIGHT };
         syncAvailable = true;
         lastSyncTime = new Date();
-        updateSyncStatus();
       }
+    } else {
+      syncAvailable = false;
     }
   } catch(e) {
-    // Cloud unavailable, fall back to localStorage
     syncAvailable = false;
-    updateSyncStatus();
   }
+  updateSyncStatus();
 
-  // Fallback: load from localStorage if no cloud data was loaded
+  // Fallback: load from localStorage if cloud has no real data
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      // Only use localStorage if cloud didn't provide data (avoid overwriting newer cloud data)
-      if (!appData.dietRecords || appData.dietRecords.length === 0) {
+      const hasCloudData = appData.dietRecords.length > 0 || appData.weightRecords.length > 0 || appData.moodRecords.length > 0;
+      if (!hasCloudData) {
         appData = { ...appData, ...parsed };
       }
       if (!appData.dietRecords) appData.dietRecords = [];
@@ -662,12 +669,10 @@ async function loadData() {
       if (!appData.weightRecords) appData.weightRecords = [];
       if (!appData.checkups) appData.checkups = [];
       if (!appData.moodRecords) appData.moodRecords = [];
-      // Ensure default checkup exists
       const hasDefault = appData.checkups.some(c => c.date === '2026-06-25' && c.type.includes('16周'));
       if (!hasDefault) {
         appData.checkups.unshift({ id: 'c1', date: '2026-06-25', hospital: '省妇保', type: '16周常规B超 + 宫颈管检查', timeOfDay: '下午', status: 'upcoming', notes: '' });
       }
-      // Ensure profile
       if (!appData.profile) appData.profile = { lmp: LMP, prePregnancyWeight: PRE_PREGNANCY_WEIGHT, height: HEIGHT };
     } catch(e) { console.error('Data load error:', e); }
   }
@@ -680,7 +685,7 @@ function saveData() {
 
 async function syncToCloud() {
   try {
-    const resp = await fetch(CLOUD_URL, {
+    const resp = await fetch(BLOB_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(appData)
@@ -688,7 +693,8 @@ async function syncToCloud() {
     if (resp.ok) {
       syncAvailable = true;
       lastSyncTime = new Date();
-      updateSyncStatus();
+    } else {
+      syncAvailable = false;
     }
   } catch(e) {
     syncAvailable = false;
@@ -698,14 +704,17 @@ async function syncToCloud() {
 
 function updateSyncStatus() {
   const el = document.getElementById('syncStatus');
+  const debugEl = document.getElementById('syncDebug');
   if (!el) return;
   if (syncAvailable) {
     const timeStr = lastSyncTime ? lastSyncTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
     el.innerHTML = '☁️ ' + (timeStr ? timeStr + ' 已同步' : '已连接');
     el.style.color = 'var(--green)';
+    if (debugEl) debugEl.textContent = '服务器连接正常';
   } else {
     el.innerHTML = '🔒 离线模式';
     el.style.color = 'var(--text-light)';
+    if (debugEl) debugEl.textContent = '无法连接同步服务器 (localhost:3456)';
   }
 }
 
