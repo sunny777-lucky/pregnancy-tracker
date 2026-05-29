@@ -263,6 +263,32 @@ body {
 .mood-record .mood-text { flex:1; color: var(--text); }
 .mood-record .mood-date { font-size: 0.7rem; color: var(--text-light); white-space: nowrap; }
 
+/* 补剂/便便/睡眠选项按钮 */
+.poop-state-btn, .sleep-state-btn {
+  font-size: 0.78rem; padding: 5px 10px; border-radius: 16px;
+  border: 1.5px solid var(--border); background: var(--card); cursor: pointer;
+  transition: all 0.2s; color: var(--text);
+}
+.poop-state-btn.active, .sleep-state-btn.active {
+  border-color: var(--primary); background: var(--primary-light);
+  color: var(--primary-dark); font-weight: 600;
+}
+/* 作息模块卡片摘要 */
+.routine-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.83rem;
+}
+.routine-row:last-child { border-bottom: none; }
+.routine-row .routine-label { font-weight: 600; min-width: 60px; color: var(--primary-dark); }
+.routine-row .routine-val { flex: 1; color: var(--text); }
+.routine-row .routine-actions { display: flex; gap: 4px; }
+/* 睡眠时长徽章 */
+.sleep-duration-badge {
+  display: inline-block; padding: 2px 8px;
+  background: var(--green-light); color: var(--green);
+  border-radius: 8px; font-size: 0.72rem; font-weight: 600; margin-left: 6px;
+}
+
 /* Brand Header */
 .brand-header {
   text-align: center; padding: 14px 20px 6px;
@@ -415,17 +441,31 @@ body {
       <h3><span class="dot"></span>今日数据概览</h3>
       <div class="data-bar" id="todayStats">
         <div class="stat"><div class="num" id="statMeals">-</div><div class="desc">今日饮食</div></div>
-        <div class="stat"><div class="num" id="statExercise">-</div><div class="desc">运动/分钟</div></div>
+        <div class="stat"><div class="num" id="statExercise">-</div><div class="desc">运动分钟</div></div>
         <div class="stat"><div class="num" id="statWeight">-</div><div class="desc">体重/kg</div></div>
       </div>
-      <div class="settings-row">
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <div style="flex:1;background:var(--blue-light);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:1.15rem;font-weight:700;color:var(--blue);" id="statSupplements">-</div>
+          <div style="font-size:0.68rem;color:var(--text-light);margin-top:2px;">💊 补剂</div>
+        </div>
+        <div style="flex:1;background:var(--warning-light);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:1.15rem;font-weight:700;color:var(--warning);" id="statPoop">-</div>
+          <div style="font-size:0.68rem;color:var(--text-light);margin-top:2px;">💩 便便</div>
+        </div>
+        <div style="flex:1;background:var(--green-light);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:1.15rem;font-weight:700;color:var(--green);" id="statSleep">-</div>
+          <div style="font-size:0.68rem;color:var(--text-light);margin-top:2px;">😴 睡眠</div>
+        </div>
+      </div>
+      <div class="settings-row" style="margin-top:12px;">
         <button class="btn btn-outline" onclick="exportData()">📥 导出备份</button>
         <button class="btn btn-outline" onclick="importData()">📤 导入备份</button>
       </div>
     </div>
   </div>
 
-  <!-- 饮食记录 -->
+  <!-- 作息记录 -->
   <div class="tab-content" id="tab-diet">
     <div class="date-nav">
       <button onclick="changeDate(-1)">◀</button>
@@ -434,7 +474,7 @@ body {
       <button onclick="selectedDate=todayStr();renderAll();" style="font-size:0.75rem;width:auto;padding:6px 12px;border-radius:8px;">今天</button>
     </div>
     <div class="card">
-      <h3><span class="dot"></span>当日饮食概览</h3>
+      <h3><span class="dot"></span>当日饮食</h3>
       <div class="meal-summary" id="mealSummary">
         <div class="meal-card empty"><div class="meal-label">🌅 早餐</div><div class="meal-content">暂未记录</div></div>
         <div class="meal-card empty"><div class="meal-label">☀️ 午餐</div><div class="meal-content">暂未记录</div></div>
@@ -446,8 +486,23 @@ body {
       <button class="btn btn-primary btn-block" onclick="openDietForm()">+ 添加饮食记录</button>
     </div>
     <div class="card">
-      <h3><span class="dot"></span>历史饮食记录</h3>
-      <div class="record-list" id="dietHistory"><div class="empty-state"><div class="empty-icon">🍽️</div>暂无记录，开始记录你的每一餐吧</div></div>
+      <h3><span class="dot" style="background:var(--blue)"></span>当日补剂</h3>
+      <div id="supplementSummary"><div class="empty-state" style="padding:12px 0;"><div class="empty-icon" style="font-size:1.5rem;">💊</div>暂无补剂记录</div></div>
+      <button class="btn btn-primary btn-block" onclick="openSupplementForm()">+ 添加补剂记录</button>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--accent)"></span>当日便便</h3>
+      <div id="poopSummary"><div class="empty-state" style="padding:12px 0;"><div class="empty-icon" style="font-size:1.5rem;">💩</div>暂无记录</div></div>
+      <button class="btn btn-primary btn-block" onclick="openPoopForm()">+ 添加便便记录</button>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--green)"></span>当日睡眠</h3>
+      <div id="sleepSummary"><div class="empty-state" style="padding:12px 0;"><div class="empty-icon" style="font-size:1.5rem;">😴</div>暂无睡眠记录</div></div>
+      <button class="btn btn-primary btn-block" onclick="openSleepForm()">+ 添加睡眠记录</button>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>历史记录</h3>
+      <div class="record-list" id="dietHistory"><div class="empty-state"><div class="empty-icon">🍽️</div>暂无记录</div></div>
     </div>
   </div>
 
@@ -531,11 +586,115 @@ body {
   <!-- Bottom Nav -->
   <nav class="bottom-nav">
     <button class="active" data-tab="overview"><span class="icon">🏠</span>概览</button>
-    <button data-tab="diet"><span class="icon">🍽️</span>饮食</button>
+    <button data-tab="diet"><span class="icon">🌙</span>作息</button>
     <button data-tab="exercise"><span class="icon">🏃</span>运动</button>
     <button data-tab="weight"><span class="icon">⚖️</span>体重</button>
     <button data-tab="checkup"><span class="icon">📋</span>产检</button>
   </nav>
+</div>
+
+<!-- Supplement Form Modal -->
+<div class="modal-overlay" id="supplementModal">
+  <div class="modal">
+    <h3 id="supplementModalTitle">记录补剂</h3>
+    <div class="form-row">
+      <select id="supplementName">
+        <option value="叶酸">💊 叶酸</option>
+        <option value="铁剂">🩸 铁剂</option>
+        <option value="钙片">🦴 钙片</option>
+        <option value="DHA">🐟 DHA</option>
+        <option value="维生素D">☀️ 维生素D</option>
+        <option value="孕期复合维生素">🌿 孕期复合维生素</option>
+        <option value="其他">其他</option>
+      </select>
+      <input type="text" id="supplementCustomName" placeholder="自定义名称（选填）" style="margin-top:8px;">
+    </div>
+    <div class="form-row">
+      <input type="text" id="supplementDose" placeholder="剂量（如：1粒、400mg）">
+    </div>
+    <div class="form-row">
+      <select id="supplementTime">
+        <option value="早餐后">早餐后</option>
+        <option value="午餐后">午餐后</option>
+        <option value="晚餐后">晚餐后</option>
+        <option value="睡前">睡前</option>
+        <option value="其他">其他时间</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <textarea id="supplementNote" placeholder="备注（选填）" rows="2"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeModal('supplementModal')">取消</button>
+      <button class="btn btn-primary" style="flex:1;" id="supplementSaveBtn" onclick="saveSupplement()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Poop Form Modal -->
+<div class="modal-overlay" id="poopModal">
+  <div class="modal">
+    <h3 id="poopModalTitle">记录便便</h3>
+    <div class="form-row">
+      <label style="font-size:0.85rem;color:var(--text-light);margin-bottom:4px;display:block;">次数</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="adjustPoopCount(-1)" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--card);font-size:1.1rem;cursor:pointer;">−</button>
+        <span id="poopCountDisplay" style="font-size:1.4rem;font-weight:700;color:var(--primary-dark);min-width:32px;text-align:center;">1</span>
+        <button onclick="adjustPoopCount(1)" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--card);font-size:1.1rem;cursor:pointer;">＋</button>
+        <span style="font-size:0.82rem;color:var(--text-light);">次</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <label style="font-size:0.85rem;color:var(--text-light);margin-bottom:6px;display:block;">状态</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;" id="poopStateGroup">
+        <button class="poop-state-btn active" data-state="正常">😊 正常</button>
+        <button class="poop-state-btn" data-state="偏干">🌵 偏干</button>
+        <button class="poop-state-btn" data-state="便秘">😣 便秘</button>
+        <button class="poop-state-btn" data-state="稀软">💧 稀软</button>
+        <button class="poop-state-btn" data-state="腹泻">⚡ 腹泻</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <textarea id="poopNote" placeholder="备注（选填，如腹部不适等）" rows="2"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeModal('poopModal')">取消</button>
+      <button class="btn btn-primary" style="flex:1;" id="poopSaveBtn" onclick="savePoop()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sleep Form Modal -->
+<div class="modal-overlay" id="sleepModal">
+  <div class="modal">
+    <h3 id="sleepModalTitle">记录睡眠</h3>
+    <div class="form-row">
+      <label style="font-size:0.85rem;color:var(--text-light);margin-bottom:4px;display:block;">入睡时间</label>
+      <input type="time" id="sleepStart" value="22:30">
+    </div>
+    <div class="form-row">
+      <label style="font-size:0.85rem;color:var(--text-light);margin-bottom:4px;display:block;">起床时间</label>
+      <input type="time" id="sleepEnd" value="07:00">
+    </div>
+    <div class="form-row">
+      <label style="font-size:0.85rem;color:var(--text-light);margin-bottom:6px;display:block;">身体状态</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;" id="sleepStateGroup">
+        <button class="sleep-state-btn active" data-state="睡眠良好">😊 睡眠良好</button>
+        <button class="sleep-state-btn" data-state="多梦">💭 多梦</button>
+        <button class="sleep-state-btn" data-state="入睡困难">😔 入睡困难</button>
+        <button class="sleep-state-btn" data-state="频繁起夜">🚻 频繁起夜</button>
+        <button class="sleep-state-btn" data-state="腰背酸痛">😣 腰背酸痛</button>
+        <button class="sleep-state-btn" data-state="腿部不适">🦵 腿部不适</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <textarea id="sleepNote" placeholder="其他备注（选填）" rows="2"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="closeModal('sleepModal')">取消</button>
+      <button class="btn btn-primary" style="flex:1;" id="sleepSaveBtn" onclick="saveSleep()">保存</button>
+    </div>
+  </div>
 </div>
 
 <!-- Diet Form Modal -->
@@ -610,6 +769,9 @@ const HEIGHT = 157;
 let appData = {
   profile: { lmp: LMP, prePregnancyWeight: PRE_PREGNANCY_WEIGHT, height: HEIGHT },
   dietRecords: [],
+  supplementRecords: [],
+  poopRecords: [],
+  sleepRecords: [],
   exerciseRecords: [],
   weightRecords: [],
   checkups: [
@@ -665,6 +827,9 @@ async function loadData() {
         appData = { ...appData, ...parsed };
       }
       if (!appData.dietRecords) appData.dietRecords = [];
+      if (!appData.supplementRecords) appData.supplementRecords = [];
+      if (!appData.poopRecords) appData.poopRecords = [];
+      if (!appData.sleepRecords) appData.sleepRecords = [];
       if (!appData.exerciseRecords) appData.exerciseRecords = [];
       if (!appData.weightRecords) appData.weightRecords = [];
       if (!appData.checkups) appData.checkups = [];
@@ -971,6 +1136,9 @@ function renderAll() {
   generateAlerts();
   renderMood();
   renderDiet();
+  renderSupplements();
+  renderPoops();
+  renderSleeps();
   renderExercise();
   renderWeight();
   renderCheckups();
@@ -986,6 +1154,37 @@ function updateTodayStats() {
   document.getElementById('statMeals').textContent = meals > 0 ? meals + '餐' : '-';
   document.getElementById('statExercise').textContent = exerciseMins > 0 ? exerciseMins : '-';
   document.getElementById('statWeight').textContent = weightRec ? weightRec.weight : '-';
+
+  // 新增三项
+  const supplements = appData.supplementRecords.filter(r => r.date === today);
+  const poops = appData.poopRecords.filter(r => r.date === today);
+  const sleepRec = appData.sleepRecords.filter(r => r.date === today)[0];
+
+  const supEl = document.getElementById('statSupplements');
+  if (supEl) supEl.textContent = supplements.length > 0 ? supplements.length + '种' : '-';
+
+  const poopEl = document.getElementById('statPoop');
+  if (poopEl) {
+    if (poops.length > 0) {
+      const total = poops.reduce((s, r) => s + (r.count || 1), 0);
+      poopEl.textContent = total + '次';
+    } else {
+      poopEl.textContent = '-';
+    }
+  }
+
+  const sleepEl = document.getElementById('statSleep');
+  if (sleepEl) {
+    if (sleepRec && sleepRec.start && sleepRec.end) {
+      const [sh, sm] = sleepRec.start.split(':').map(Number);
+      let [eh, em] = sleepRec.end.split(':').map(Number);
+      let mins = (eh * 60 + em) - (sh * 60 + sm);
+      if (mins < 0) mins += 24 * 60;
+      sleepEl.textContent = Math.floor(mins / 60) + 'h' + (mins % 60 > 0 ? (mins % 60) + 'm' : '');
+    } else {
+      sleepEl.textContent = '-';
+    }
+  }
 }
 
 function updateDateDisplays() {
@@ -1069,7 +1268,10 @@ function renderCalendar() {
     const hasExercise = appData.exerciseRecords.some(r => r.date === dateStr);
     const hasWeight = appData.weightRecords.some(r => r.date === dateStr);
     const hasMood = appData.moodRecords.some(r => r.date === dateStr);
-    if (hasDiet || hasExercise || hasWeight || hasMood) cls += ' has-record';
+    const hasSupplement = appData.supplementRecords.some(r => r.date === dateStr);
+    const hasPoop = appData.poopRecords.some(r => r.date === dateStr);
+    const hasSleep = appData.sleepRecords.some(r => r.date === dateStr);
+    if (hasDiet || hasExercise || hasWeight || hasMood || hasSupplement || hasPoop || hasSleep) cls += ' has-record';
 
     const gDate = calcGestationalForDate(dateStr);
     if (isToday) {
@@ -1352,8 +1554,16 @@ function renderDiet() {
     return (mealOrder[a.meal]||0) - (mealOrder[b.meal]||0);
   });
 
-  if (sortedRecords.length === 0) {
-    historyContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">🍽️</div>暂无记录，开始记录你的每一餐吧</div>';
+  // Build combined history: diet + supplement + poop + sleep (all dates, sorted by date desc)
+  const allRecords = [
+    ...appData.dietRecords.map(r => ({...r, _type:'diet'})),
+    ...appData.supplementRecords.map(r => ({...r, _type:'supplement'})),
+    ...appData.poopRecords.map(r => ({...r, _type:'poop'})),
+    ...appData.sleepRecords.map(r => ({...r, _type:'sleep'}))
+  ].sort((a, b) => b.date.localeCompare(a.date) || (b.time || '').localeCompare(a.time || ''));
+
+  if (allRecords.length === 0) {
+    historyContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div>暂无记录，快去记录今天的作息吧</div>';
     return;
   }
 
@@ -1361,17 +1571,51 @@ function renderDiet() {
   const badgeText = { breakfast:'早餐', lunch:'午餐', dinner:'晚餐', morning_snack:'上午加餐', afternoon_snack:'下午加餐', evening_snack:'晚上加餐' };
 
   let histHtml = '';
-  sortedRecords.forEach(r => {
+  allRecords.forEach(r => {
     histHtml += '<div class="record-item">';
     histHtml += '<div class="record-main">';
-    histHtml += '<span class="badge '+ (badgeClass[r.meal]||'') +'">'+ (badgeText[r.meal]||r.meal) +'</span> ';
-    histHtml += '<span class="record-title">'+ escapeHtml(r.foods) +'</span>';
-    if (r.feeling) histHtml += '<div class="record-detail">💭 '+ escapeHtml(r.feeling) +'</div>';
-    histHtml += '</div>';
-    histHtml += '<div class="record-time">'+ formatDateCN(r.date) + (r.time ? ' ' + r.time : '') +'<br><div style="display:flex;gap:4px;justify-content:flex-end;margin-top:2px;">';
-    histHtml += '<button class="btn btn-sm btn-outline" onclick="editDiet(\''+ r.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
-    histHtml += '<button class="delete-btn" onclick="deleteDiet(\''+ r.id +'\')">✕</button>';
-    histHtml += '</div></div>';
+    if (r._type === 'diet') {
+      histHtml += '<span class="badge '+ (badgeClass[r.meal]||'') +'">'+ (badgeText[r.meal]||r.meal) +'</span> ';
+      histHtml += '<span class="record-title">'+ escapeHtml(r.foods) +'</span>';
+      if (r.feeling) histHtml += '<div class="record-detail">💭 '+ escapeHtml(r.feeling) +'</div>';
+      histHtml += '</div><div class="record-time">'+ formatDateCN(r.date) + (r.time ? ' ' + r.time : '') +'<br><div style="display:flex;gap:4px;justify-content:flex-end;margin-top:2px;">';
+      histHtml += '<button class="btn btn-sm btn-outline" onclick="editDiet(\''+ r.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+      histHtml += '<button class="delete-btn" onclick="deleteDiet(\''+ r.id +'\')">✕</button>';
+      histHtml += '</div></div>';
+    } else if (r._type === 'supplement') {
+      const name = r.customName || r.name;
+      histHtml += '<span class="badge" style="background:var(--blue-light);color:var(--blue);">💊 补剂</span> ';
+      histHtml += '<span class="record-title">'+ escapeHtml(name) +'</span>';
+      histHtml += '<div class="record-detail">'+ escapeHtml(r.dose) + (r.takeTime ? ' · ' + r.takeTime : '') +'</div>';
+      histHtml += '</div><div class="record-time">'+ formatDateCN(r.date) + (r.time ? ' ' + r.time : '') +'<br><div style="display:flex;gap:4px;justify-content:flex-end;margin-top:2px;">';
+      histHtml += '<button class="btn btn-sm btn-outline" onclick="editSupplement(\''+ r.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+      histHtml += '<button class="delete-btn" onclick="deleteSupplement(\''+ r.id +'\')">✕</button>';
+      histHtml += '</div></div>';
+    } else if (r._type === 'poop') {
+      histHtml += '<span class="badge" style="background:var(--warning-light);color:var(--warning);">💩 便便</span> ';
+      histHtml += '<span class="record-title">'+ r.count +'次 · '+ escapeHtml(r.state) +'</span>';
+      if (r.note) histHtml += '<div class="record-detail">'+ escapeHtml(r.note) +'</div>';
+      histHtml += '</div><div class="record-time">'+ formatDateCN(r.date) + (r.time ? ' ' + r.time : '') +'<br><div style="display:flex;gap:4px;justify-content:flex-end;margin-top:2px;">';
+      histHtml += '<button class="btn btn-sm btn-outline" onclick="editPoop(\''+ r.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+      histHtml += '<button class="delete-btn" onclick="deletePoop(\''+ r.id +'\')">✕</button>';
+      histHtml += '</div></div>';
+    } else if (r._type === 'sleep') {
+      let dur = '';
+      if (r.start && r.end) {
+        const [sh, sm] = r.start.split(':').map(Number);
+        let [eh, em] = r.end.split(':').map(Number);
+        let mins = (eh*60+em)-(sh*60+sm);
+        if (mins < 0) mins += 24*60;
+        dur = ' · ' + Math.floor(mins/60) + 'h' + (mins%60 > 0 ? (mins%60)+'m' : '');
+      }
+      histHtml += '<span class="badge" style="background:var(--green-light);color:var(--green);">😴 睡眠</span> ';
+      histHtml += '<span class="record-title">'+ (r.start||'') +' → '+ (r.end||'') + dur +'</span>';
+      histHtml += '<div class="record-detail">'+ escapeHtml(r.state) + (r.note ? ' · ' + r.note : '') +'</div>';
+      histHtml += '</div><div class="record-time">'+ formatDateCN(r.date) + (r.time ? ' ' + r.time : '') +'<br><div style="display:flex;gap:4px;justify-content:flex-end;margin-top:2px;">';
+      histHtml += '<button class="btn btn-sm btn-outline" onclick="editSleep(\''+ r.id +'\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+      histHtml += '<button class="delete-btn" onclick="deleteSleep(\''+ r.id +'\')">✕</button>';
+      histHtml += '</div></div>';
+    }
     histHtml += '</div>';
   });
   historyContainer.innerHTML = histHtml;
@@ -1433,6 +1677,277 @@ function deleteDiet(id) {
   saveData();
   renderAll();
   showToast('已删除');
+}
+
+// ==================== 补剂记录 ====================
+let editingSupplementId = null;
+
+function renderSupplements() {
+  const recs = appData.supplementRecords.filter(r => r.date === selectedDate);
+  const el = document.getElementById('supplementSummary');
+  if (!el) return;
+  if (recs.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="padding:12px 0;"><div class="empty-icon" style="font-size:1.5rem;">💊</div>暂无补剂记录</div>';
+    return;
+  }
+  let html = '';
+  recs.forEach(r => {
+    const name = r.customName || r.name;
+    html += '<div class="routine-row">';
+    html += '<span class="routine-label">💊 ' + escapeHtml(name) + '</span>';
+    html += '<span class="routine-val">' + escapeHtml(r.dose || '') + (r.takeTime ? ' · ' + escapeHtml(r.takeTime) : '') + '</span>';
+    html += '<div class="routine-actions">';
+    html += '<button class="btn btn-sm btn-outline" onclick="editSupplement(\'' + r.id + '\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+    html += '<button class="delete-btn" onclick="deleteSupplement(\'' + r.id + '\')">✕</button>';
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function openSupplementForm(editId) {
+  editingSupplementId = editId || null;
+  const titleEl = document.getElementById('supplementModalTitle');
+  const btn = document.getElementById('supplementSaveBtn');
+  if (editId) {
+    const rec = appData.supplementRecords.find(r => r.id === editId);
+    if (rec) {
+      document.getElementById('supplementName').value = rec.name;
+      document.getElementById('supplementCustomName').value = rec.customName || '';
+      document.getElementById('supplementDose').value = rec.dose || '';
+      document.getElementById('supplementTime').value = rec.takeTime || '早餐后';
+      document.getElementById('supplementNote').value = rec.note || '';
+    }
+    titleEl.textContent = '编辑补剂记录';
+    btn.textContent = '✓ 保存修改'; btn.style.background = 'var(--green)';
+  } else {
+    document.getElementById('supplementName').value = '叶酸';
+    document.getElementById('supplementCustomName').value = '';
+    document.getElementById('supplementDose').value = '';
+    document.getElementById('supplementTime').value = '早餐后';
+    document.getElementById('supplementNote').value = '';
+    titleEl.textContent = '记录补剂';
+    btn.textContent = '保存'; btn.style.background = '';
+  }
+  openModal('supplementModal');
+}
+
+function editSupplement(id) { openSupplementForm(id); }
+
+function saveSupplement() {
+  const name = document.getElementById('supplementName').value;
+  const customName = document.getElementById('supplementCustomName').value.trim();
+  const dose = document.getElementById('supplementDose').value.trim();
+  if (!dose) { showToast('请填写剂量'); return; }
+  const now = new Date();
+  const record = {
+    id: editingSupplementId || ('sup_' + Date.now()),
+    date: selectedDate,
+    name, customName,
+    dose,
+    takeTime: document.getElementById('supplementTime').value,
+    note: document.getElementById('supplementNote').value.trim(),
+    time: String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0')
+  };
+  if (editingSupplementId) {
+    const idx = appData.supplementRecords.findIndex(r => r.id === editingSupplementId);
+    if (idx >= 0) appData.supplementRecords[idx] = record;
+  } else {
+    appData.supplementRecords.push(record);
+  }
+  saveData(); closeModal('supplementModal'); renderAll();
+  showToast('补剂记录已保存 ✓');
+}
+
+function deleteSupplement(id) {
+  if (!confirm('确定删除这条补剂记录吗？')) return;
+  appData.supplementRecords = appData.supplementRecords.filter(r => r.id !== id);
+  saveData(); renderAll(); showToast('已删除');
+}
+
+// ==================== 便便记录 ====================
+let editingPoopId = null;
+let currentPoopCount = 1;
+let currentPoopState = '正常';
+
+function renderPoops() {
+  const recs = appData.poopRecords.filter(r => r.date === selectedDate);
+  const el = document.getElementById('poopSummary');
+  if (!el) return;
+  if (recs.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="padding:12px 0;"><div class="empty-icon" style="font-size:1.5rem;">💩</div>暂无记录</div>';
+    return;
+  }
+  let html = '';
+  recs.forEach(r => {
+    const stateColor = {'正常':'var(--green)','偏干':'var(--warning)','便秘':'#E86060','稀软':'var(--blue)','腹泻':'#E86060'}[r.state] || 'var(--text)';
+    html += '<div class="routine-row">';
+    html += '<span class="routine-label">💩 ' + r.count + '次</span>';
+    html += '<span class="routine-val" style="color:'+stateColor+';font-weight:600;">' + escapeHtml(r.state) + '</span>';
+    if (r.note) html += '<span style="font-size:0.72rem;color:var(--text-light);">' + escapeHtml(r.note) + '</span>';
+    html += '<div class="routine-actions">';
+    html += '<button class="btn btn-sm btn-outline" onclick="editPoop(\'' + r.id + '\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+    html += '<button class="delete-btn" onclick="deletePoop(\'' + r.id + '\')">✕</button>';
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function adjustPoopCount(delta) {
+  currentPoopCount = Math.max(1, currentPoopCount + delta);
+  document.getElementById('poopCountDisplay').textContent = currentPoopCount;
+}
+
+function openPoopForm(editId) {
+  editingPoopId = editId || null;
+  const titleEl = document.getElementById('poopModalTitle');
+  const btn = document.getElementById('poopSaveBtn');
+  if (editId) {
+    const rec = appData.poopRecords.find(r => r.id === editId);
+    if (rec) {
+      currentPoopCount = rec.count || 1;
+      currentPoopState = rec.state || '正常';
+      document.getElementById('poopNote').value = rec.note || '';
+    }
+    titleEl.textContent = '编辑便便记录';
+    btn.textContent = '✓ 保存修改'; btn.style.background = 'var(--green)';
+  } else {
+    currentPoopCount = 1; currentPoopState = '正常';
+    document.getElementById('poopNote').value = '';
+    titleEl.textContent = '记录便便';
+    btn.textContent = '保存'; btn.style.background = '';
+  }
+  document.getElementById('poopCountDisplay').textContent = currentPoopCount;
+  document.querySelectorAll('.poop-state-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.state === currentPoopState);
+  });
+  openModal('poopModal');
+}
+
+function editPoop(id) { openPoopForm(id); }
+
+function savePoop() {
+  const now = new Date();
+  const record = {
+    id: editingPoopId || ('poop_' + Date.now()),
+    date: selectedDate,
+    count: currentPoopCount,
+    state: currentPoopState,
+    note: document.getElementById('poopNote').value.trim(),
+    time: String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0')
+  };
+  if (editingPoopId) {
+    const idx = appData.poopRecords.findIndex(r => r.id === editingPoopId);
+    if (idx >= 0) appData.poopRecords[idx] = record;
+  } else {
+    appData.poopRecords.push(record);
+  }
+  saveData(); closeModal('poopModal'); renderAll();
+  showToast('便便记录已保存 ✓');
+}
+
+function deletePoop(id) {
+  if (!confirm('确定删除这条记录吗？')) return;
+  appData.poopRecords = appData.poopRecords.filter(r => r.id !== id);
+  saveData(); renderAll(); showToast('已删除');
+}
+
+// ==================== 睡眠记录 ====================
+let editingSleepId = null;
+let currentSleepState = '睡眠良好';
+
+function renderSleeps() {
+  const recs = appData.sleepRecords.filter(r => r.date === selectedDate);
+  const el = document.getElementById('sleepSummary');
+  if (!el) return;
+  if (recs.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="padding:12px 0;"><div class="empty-icon" style="font-size:1.5rem;">😴</div>暂无睡眠记录</div>';
+    return;
+  }
+  let html = '';
+  recs.forEach(r => {
+    let durationStr = '';
+    if (r.start && r.end) {
+      const [sh, sm] = r.start.split(':').map(Number);
+      let [eh, em] = r.end.split(':').map(Number);
+      let mins = (eh * 60 + em) - (sh * 60 + sm);
+      if (mins < 0) mins += 24 * 60;
+      const h = Math.floor(mins / 60), m = mins % 60;
+      durationStr = h + 'h' + (m > 0 ? m + 'm' : '');
+    }
+    html += '<div class="routine-row">';
+    html += '<span class="routine-label">😴 睡眠</span>';
+    html += '<span class="routine-val">';
+    if (r.start) html += r.start + ' 入睡';
+    if (r.end) html += ' &nbsp;→&nbsp; ' + r.end + ' 起床';
+    if (durationStr) html += '<span class="sleep-duration-badge">' + durationStr + '</span>';
+    html += '</span>';
+    html += '<div class="routine-actions" style="flex-direction:column;align-items:flex-end;">';
+    html += '<div style="font-size:0.72rem;color:var(--text-light);margin-bottom:3px;">' + escapeHtml(r.state) + '</div>';
+    html += '<div style="display:flex;gap:4px;">';
+    html += '<button class="btn btn-sm btn-outline" onclick="editSleep(\'' + r.id + '\')" style="font-size:0.65rem;padding:2px 8px;">✎</button>';
+    html += '<button class="delete-btn" onclick="deleteSleep(\'' + r.id + '\')">✕</button>';
+    html += '</div></div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function openSleepForm(editId) {
+  editingSleepId = editId || null;
+  const titleEl = document.getElementById('sleepModalTitle');
+  const btn = document.getElementById('sleepSaveBtn');
+  if (editId) {
+    const rec = appData.sleepRecords.find(r => r.id === editId);
+    if (rec) {
+      document.getElementById('sleepStart').value = rec.start || '22:30';
+      document.getElementById('sleepEnd').value = rec.end || '07:00';
+      currentSleepState = rec.state || '睡眠良好';
+      document.getElementById('sleepNote').value = rec.note || '';
+    }
+    titleEl.textContent = '编辑睡眠记录';
+    btn.textContent = '✓ 保存修改'; btn.style.background = 'var(--green)';
+  } else {
+    document.getElementById('sleepStart').value = '22:30';
+    document.getElementById('sleepEnd').value = '07:00';
+    currentSleepState = '睡眠良好';
+    document.getElementById('sleepNote').value = '';
+    titleEl.textContent = '记录睡眠';
+    btn.textContent = '保存'; btn.style.background = '';
+  }
+  document.querySelectorAll('.sleep-state-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.state === currentSleepState);
+  });
+  openModal('sleepModal');
+}
+
+function editSleep(id) { openSleepForm(id); }
+
+function saveSleep() {
+  const start = document.getElementById('sleepStart').value;
+  const end = document.getElementById('sleepEnd').value;
+  if (!start || !end) { showToast('请填写入睡和起床时间'); return; }
+  const now = new Date();
+  const record = {
+    id: editingSleepId || ('sleep_' + Date.now()),
+    date: selectedDate,
+    start, end,
+    state: currentSleepState,
+    note: document.getElementById('sleepNote').value.trim(),
+    time: String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0')
+  };
+  if (editingSleepId) {
+    const idx = appData.sleepRecords.findIndex(r => r.id === editingSleepId);
+    if (idx >= 0) appData.sleepRecords[idx] = record;
+  } else {
+    appData.sleepRecords.push(record);
+  }
+  saveData(); closeModal('sleepModal'); renderAll();
+  showToast('睡眠记录已保存 ✓');
+}
+
+function deleteSleep(id) {
+  if (!confirm('确定删除这条睡眠记录吗？')) return;
+  appData.sleepRecords = appData.sleepRecords.filter(r => r.id !== id);
+  saveData(); renderAll(); showToast('已删除');
 }
 
 // ==================== 运动记录 ====================
@@ -1902,7 +2417,25 @@ document.querySelectorAll('.bottom-nav button').forEach(btn => {
     document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
     document.getElementById('tab-' + tabName).classList.add('active');
     if (tabName === 'weight') renderWeight();
-    if (tabName === 'overview') { calYear = new Date().getFullYear(); calMonth = new Date().getMonth() + 1; calSelectedDate = todayStr(); renderCalendar(); renderOverview(); generateAlerts(); renderMood(); }
+    if (tabName === 'overview') { calYear = new Date().getFullYear(); calMonth = new Date().getMonth() + 1; calSelectedDate = todayStr(); renderCalendar(); renderOverview(); generateAlerts(); renderMood(); updateTodayStats(); }
+  });
+});
+
+// 便便状态按钮绑定
+document.querySelectorAll('.poop-state-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentPoopState = btn.dataset.state;
+    document.querySelectorAll('.poop-state-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// 睡眠状态按钮绑定
+document.querySelectorAll('.sleep-state-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentSleepState = btn.dataset.state;
+    document.querySelectorAll('.sleep-state-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
   });
 });
 
